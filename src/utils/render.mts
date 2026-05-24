@@ -19,7 +19,7 @@ const fg = {
   gray: `${ESC}37m`,
 } as const;
 
-const bg = {
+const _bg = {
   reset: `${ESC}0m`,
   white: `${ESC}47m`,
   black: `${ESC}40m`,
