@@ -14,7 +14,7 @@ Deno.test("sets up the game correctly", () => {
   assertEquals(game.getBoard(), boardInstance.getBoard());
   assertEquals(game.getPlayerToMove(), "white");
   assertEquals(game.getHistory().length, 0);
-  assertEquals(game.isOver(), null);
+  assertEquals(game.isOver(), undefined);
 });
 
 Deno.test("Player moves are switching correctly", () => {
@@ -63,7 +63,7 @@ Deno.test("Whether the history is appended succesfully after each turn ", () => 
 });
 
 Deno.test("Handles correctly when the game is won by white", () => {
-  assertEquals(game.isOver(), null);
+  assertEquals(game.isOver(), undefined);
   game.insertCoin("white", 4);
   game.insertCoin("black", 3);
   game.insertCoin("white", 4);
@@ -75,7 +75,7 @@ Deno.test("Handles correctly when the game is won by white", () => {
 });
 
 Deno.test("Handles correctly when the game is won by black", () => {
-  assertEquals(game.isOver(), null);
+  assertEquals(game.isOver(), undefined);
   game.insertCoin("white", 1);
   game.insertCoin("black", 3);
   game.insertCoin("white", 4);
@@ -88,7 +88,7 @@ Deno.test("Handles correctly when the game is won by black", () => {
 });
 
 Deno.test("accepts custom configurations correctly", () => {
-  const testGame = new Game(boardInstance, "black");
+  const testGame = new Game(boardInstance, 2, "black");
   assertEquals(testGame.getPlayerToMove(), "black");
   testGame.insertCoin("black", 3);
   assertEquals(testGame.getPlayerToMove(), "white");

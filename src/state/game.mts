@@ -1,19 +1,13 @@
-import { BoardBase, type square } from "./board.mts";
+import { BoardBase } from "./board.mts";
+import { color, colors, moveData, square } from "./types.mts";
 import { getBoardString } from "../utils/render.mts";
-
-export type moveData = {
-  player: "white" | "black";
-  move: number;
-  col: number;
-  wins: boolean;
-};
 
 export interface GameInterface {
   // returns which player's move it is
-  getPlayerToMove(): "white" | "black";
+  getPlayerToMove(): color;
 
   // return true if the player wins, false if not
-  insertCoin(player: "white" | "black", col: number): boolean;
+  insertCoin(player: color, col: number): boolean;
 
   // returns a list of all the moves made up to now
   getHistory(): moveData[];
@@ -25,22 +19,36 @@ export interface GameInterface {
   getBoard(): square[][];
 
   // returns whether the game was won
-  isOver(): "white" | "black" | "stalemate" | null;
+  isOver(): color | "stalemate" | undefined;
 }
 
 export class Game implements GameInterface {
   private board: BoardBase;
-  private playerToMove: "white" | "black" = "white";
+  private players: color[];
+  private playerToMoveIdx: number = 0;
   private history: moveData[] = [];
   private moveCount: number = 0;
 
-  constructor(board: BoardBase, playerToStart: "white" | "black" = "white") {
+  constructor(
+    board: BoardBase,
+    playerCount: number = 2,
+    playerToStart: color = "white",
+  ) {
+    if (playerCount < 2) throw new Error("More than 2 players are required");
+    if (playerCount > colors.length) throw new Error("Choose less players");
+    this.players = colors.slice(0, playerCount);
+
     this.board = board;
-    this.playerToMove = playerToStart;
+    if (!this.players.includes(playerToStart)) {
+      throw new Error("player not available");
+    }
+    this.playerToMoveIdx = this.players.findIndex((p) => p === playerToStart);
   }
 
   private switchTurn(): void {
-    this.playerToMove = this.playerToMove === "white" ? "black" : "white";
+    this.playerToMoveIdx = this.playerToMoveIdx + 1 >= this.players.length
+      ? 0
+      : this.playerToMoveIdx + 1;
   }
 
   public getBoard(): square[][] {
@@ -50,17 +58,17 @@ export class Game implements GameInterface {
   public getBoardString(): string {
     return getBoardString(
       this.getBoard(),
-      `Turn: ${this.moveCount}          Move: ${this.playerToMove}`,
+      `Turn: ${this.moveCount}          Move: ${this.getPlayerToMove()}`,
     );
   }
 
-  public getPlayerToMove(): "white" | "black" {
-    return this.playerToMove;
+  public getPlayerToMove(): color {
+    return this.players[this.playerToMoveIdx];
   }
 
-  public insertCoin(player: "white" | "black", col: number): boolean {
-    if (this.playerToMove !== player) throw new Error("Its not your turn");
-    if (this.isOver() !== null) throw new Error("Game is over");
+  public insertCoin(player: color, col: number): boolean {
+    if (this.getPlayerToMove() !== player) throw new Error("Its not your turn");
+    if (this.isOver()) throw new Error("Game is over");
     this.board.insertCoin(player, col);
 
     const win = this.board.isOver();
@@ -82,7 +90,7 @@ export class Game implements GameInterface {
     return this.history;
   }
 
-  public isOver(): "white" | "black" | "stalemate" | null {
-    return this.board.isOver();
+  public isOver(): color | "stalemate" | undefined {
+    return this.board.isOver() ?? undefined;
   }
 }

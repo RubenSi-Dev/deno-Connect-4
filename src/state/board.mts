@@ -1,10 +1,10 @@
-export type square = "white" | "black" | null;
+import type { color, square } from "./types.mts";
 
 export abstract class BoardBase {
   protected constructor(_init: string) {}
   abstract getBoard(): square[][];
-  abstract insertCoin(color: "white" | "black", Column: number): void;
-  abstract isOver(): "white" | "black" | "stalemate" | null;
+  abstract insertCoin(color: color, Column: number): void;
+  abstract isOver(): color | "stalemate" | undefined;
 }
 
 export class Board extends BoardBase {
@@ -21,7 +21,7 @@ export class Board extends BoardBase {
     } else throw new Error("invalid setup");
   }
 
-  isOver(): "white" | "black" | "stalemate" | null {
+  isOver(): color | "stalemate" | undefined {
     if (!this.board.map((sqs) => !sqs.includes(null)).includes(false)) {
       return "stalemate";
     }
@@ -35,7 +35,7 @@ export class Board extends BoardBase {
       row: number,
       dc: number,
       dr: number,
-    ): "white" | "black" | null => {
+    ): square => {
       const color = this.board[col][row];
       if (color === null) return null;
       for (let i = 1; i < 4; i++) {
@@ -69,7 +69,7 @@ export class Board extends BoardBase {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   public getBoard(): square[][] {
@@ -78,7 +78,7 @@ export class Board extends BoardBase {
     return result;
   }
 
-  public insertCoin(color: "white" | "black", column: number): void {
+  public insertCoin(color: color, column: number): void {
     if (column < 0 || column >= this.board.length) {
       throw new Error("not a valid column");
     }

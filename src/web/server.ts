@@ -1,5 +1,6 @@
-import { Board, square } from "../state/board.mts";
+import { Board } from "../state/board.mts";
 import { Game } from "../state/game.mts";
+import { color, square } from "../state/types.mts";
 
 const port = 8080;
 
@@ -16,8 +17,8 @@ type ClientRequest = {
 };
 
 type ServerResponse = {
-  toMove: "white" | "black";
-  winner: "white" | "black" | "stalemate" | null;
+  toMove: color;
+  winner: color | "stalemate" | undefined;
   board: square[][];
 };
 

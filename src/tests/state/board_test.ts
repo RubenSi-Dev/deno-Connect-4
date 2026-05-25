@@ -78,7 +78,7 @@ function makeBoard(
 // ---------------------------------------------------------------------------
 
 Deno.test("isOver() returns null on an empty board", () => {
-  assertEquals(new Board().isOver(), null);
+  assertEquals(new Board().isOver(), undefined);
 });
 
 Deno.test("isOver() returns null with fewer than 4 same-color coins", () => {
@@ -87,7 +87,7 @@ Deno.test("isOver() returns null with fewer than 4 same-color coins", () => {
     { color: "white", col: 1 },
     { color: "white", col: 2 },
   ]);
-  assertEquals(board.isOver(), null);
+  assertEquals(board.isOver(), undefined);
 });
 
 Deno.test("isOver() returns null when 4 same-color coins have a gap (horizontal)", () => {
@@ -99,7 +99,7 @@ Deno.test("isOver() returns null when 4 same-color coins have a gap (horizontal)
     { color: "white", col: 3 },
     { color: "white", col: 4 },
   ]);
-  assertEquals(board.isOver(), null);
+  assertEquals(board.isOver(), undefined);
 });
 
 Deno.test("isOver() returns null when 4 same-color coins have a gap (vertical)", () => {
@@ -110,7 +110,7 @@ Deno.test("isOver() returns null when 4 same-color coins have a gap (vertical)",
     { color: "white", col: 0 },
     { color: "white", col: 0 },
   ]);
-  assertEquals(board.isOver(), null);
+  assertEquals(board.isOver(), undefined);
 });
 
 // ---------------------------------------------------------------------------
