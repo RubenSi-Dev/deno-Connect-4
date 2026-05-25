@@ -6,6 +6,9 @@ export interface GameInterface {
   // returns which player's move it is
   getPlayerToMove(): color;
 
+  // returns index in player array of player to move
+  getPlayerToMoveIndex(): number;
+
   // return true if the player wins, false if not
   insertCoin(player: color, col: number): boolean;
 
@@ -20,6 +23,9 @@ export interface GameInterface {
 
   // returns whether the game was won
   isOver(): color | "stalemate" | undefined;
+
+  // returns all the players
+  getPlayers(): color[];
 }
 
 export class Game implements GameInterface {
@@ -44,6 +50,17 @@ export class Game implements GameInterface {
     }
     this.playerToMoveIdx = this.players.findIndex((p) => p === playerToStart);
   }
+  public getPlayers(): color[] {
+    return Array.from(this.players);
+  }
+
+  public getPlayerToMoveIndex(): number {
+    return this.playerToMoveIdx;
+  }
+
+  public getPlayerToMove(): color {
+    return this.players[this.playerToMoveIdx];
+  }
 
   private switchTurn(): void {
     this.playerToMoveIdx = this.playerToMoveIdx + 1 >= this.players.length
@@ -60,10 +77,6 @@ export class Game implements GameInterface {
       this.getBoard(),
       `Turn: ${this.moveCount}          Move: ${this.getPlayerToMove()}`,
     );
-  }
-
-  public getPlayerToMove(): color {
-    return this.players[this.playerToMoveIdx];
   }
 
   public insertCoin(player: color, col: number): boolean {

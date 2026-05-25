@@ -73,3 +73,15 @@ Deno.test("throws when its not the players turn", () => {
   assertThrows(() => game.insertCoin("blue", 0));
   assertThrows(() => game.insertCoin("black", 0));
 });
+
+Deno.test("get list of current players", () => {
+  const game = new Game(board, 4);
+  assertEquals(game.getPlayers(), colors.slice(0, 4));
+  const game2 = new Game(board, 5);
+  assertEquals(game2.getPlayers(), colors.slice(0, 5));
+});
+
+Deno.test("throws when asking to play with too many or too few players", () => {
+  assertThrows(() => new Game(board, 1));
+  assertThrows(() => new Game(board, 10));
+});
