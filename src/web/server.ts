@@ -1,22 +1,20 @@
-import { randomUUID, RandomUUIDOptions } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { GameInstance } from "./game-instance.mts";
 import { ClientRequest } from "./models.mts";
 
 const port = 8080;
 
-//let game: GameInstance;
-const games = new Map<string, GameInstance>();
+const games = new Map<string, GameInstance | null>();
 
 function handleWs(sock: WebSocket, gameUUID: string) {
-	const game = games.get(gameUUID);
-	if (!game) {
-		throw new Error("game doesnt exist")
-	}
+  const game = games.get(gameUUID);
+  if (!game) {
+    sock.close(1011, "game does not exist");
+    return;
+  }
 
   sock.onclose = () => {
-    if (game) {
-      game.playerLeave(sock);
-    }
+    game.playerLeave(sock);
     console.log("a client disconnected");
   };
 
@@ -34,25 +32,51 @@ function handleWs(sock: WebSocket, gameUUID: string) {
 Deno.serve({ port }, (req) => {
   const url = new URL(req.url);
   const method = req.method;
+
+  // POST /games — plain HTTP: create a new game, return its UUID
   if (method === "POST" && url.pathname === "/games") {
     let uuid = randomUUID();
-    while (games.get(uuid)) {
+    while (games.has(uuid)) {
       uuid = randomUUID();
     }
-    const { socket, response } = Deno.upgradeWebSocket(req);
-    games.set(uuid, new GameInstance(socket));
-    handleWs(socket, uuid);
-    return response;
-  } else if (method === "GET") {
-    const [_, path1, gameUUID] = url.pathname.split("/");
-    if (path1 === "games" && gameUUID) {
-      const game = games.get(gameUUID);
-      if (game) {
-        const { socket, response } = Deno.upgradeWebSocket(req);
-        game.playerJoin(socket);
-        handleWs(socket, gameUUID);
-        return response;
+    // Reserve the slot with a temporary placeholder so the UUID is valid
+    // before the WebSocket connection is established.
+    games.set(uuid, null);
+		console.log(games);
+    return new Response(JSON.stringify({ gameId: uuid }), {
+      status: 201,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  // GET /games/:uuid/ws — WebSocket upgrade: creator or joiner connects
+  if (method === "GET") {
+    const parts = url.pathname.split("/"); // ["", "games", uuid, "ws"]
+    const [, path1, gameUUID, path3] = parts;
+
+    if (path1 === "games" && gameUUID && path3 === "ws") {
+      const isCreator = !games.get(gameUUID) && games.has(gameUUID);
+      const isJoiner = !!games.get(gameUUID);
+
+      if (!games.has(gameUUID)) {
+        return new Response(JSON.stringify({ error: "Game not found" }), {
+          status: 404,
+          headers: { "content-type": "application/json" },
+        });
       }
+
+      const { socket, response } = Deno.upgradeWebSocket(req);
+
+      if (isCreator) {
+        // First connection: this is the game creator
+        games.set(gameUUID, new GameInstance(socket));
+      } else if (isJoiner) {
+        // Subsequent connections: joining players
+        games.get(gameUUID)!.playerJoin(socket);
+      }
+
+      handleWs(socket, gameUUID);
+      return response;
     }
   }
 
