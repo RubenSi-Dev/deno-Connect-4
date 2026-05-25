@@ -1,76 +1,42 @@
-import { Board } from "../state/board.mts";
-import { Game } from "../state/game.mts";
-import { color, square } from "../state/types.mts";
+//import { Board } from "../state/board.mts";
+//import { Game } from "../state/game.mts";
+import { GameInstance } from "./game-instance.mts";
+import { ClientRequest } from "./models.mts";
 
 const port = 8080;
 
-let whiteSocket: WebSocket;
-let blackSocket: WebSocket;
+//let whiteSocket: WebSocket;
+//let blackSocket: WebSocket;
 
-const sockets: WebSocket[] = [];
+//const sockets: WebSocket[] = [];
 
-const game = new Game(new Board());
-
-type ClientRequest = {
-  type: string;
-  [keys: string]: string | number;
-};
-
-type ServerResponse = {
-  toMove: color;
-  winner: color | "stalemate" | undefined;
-  board: square[][];
-};
+//const game = new Game(new Board());
+let game: GameInstance;
 
 function handleWs(sock: WebSocket) {
   sock.onopen = () => {
-    if (!whiteSocket) {
-      whiteSocket = sock;
-      sockets.push(sock);
-      console.log("white connected");
-    } else if (!blackSocket) {
-      blackSocket = sock;
-      sockets.push(sock);
-      console.log("black connected");
+    if (!game) {
+      game = new GameInstance(sock);
     } else {
-      sock.close(409, "2 players already present");
+      game.playerJoin(sock);
     }
   };
 
   sock.onclose = () => {
+    if (game) {
+      game.playerLeave(sock);
+    }
     console.log("a client disconnected");
   };
-
-  sock.addEventListener("message", (event) => {
-    if (event.data === "ping") {
-      sock.send("pong");
-    }
-  });
 
   sock.onmessage = (e) => {
     try {
       const msg = JSON.parse(e.data) as ClientRequest;
-      const color = (sock === whiteSocket) ? "white" : "black";
-      const resp = handleReq(msg, color);
-      sockets.forEach((s) => s.send(JSON.stringify(resp)));
-      //sock.send(JSON.stringify(resp));
+      if (!game.gameHasStarted()) game.startGame();
+      game.handleRequest(sock, msg);
     } catch (err) {
       sock.send(String(err));
     }
-  };
-}
-
-function handleReq(
-  req: ClientRequest,
-  color: "white" | "black",
-): ServerResponse {
-  if (req.type === "insertCoin") {
-    game.insertCoin(color, Number(req["col"]));
-  }
-  return {
-    toMove: color,
-    winner: game.isOver(),
-    board: game.getBoard(),
   };
 }
 
