@@ -39,7 +39,6 @@ export class GameInstance {
   }
 
   private broadcastResponse(resp: ServerResponse): void {
-    console.log(this.players);
     this.players.forEach((p) => p.send(JSON.stringify(resp)));
   }
 

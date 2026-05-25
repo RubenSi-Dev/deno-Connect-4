@@ -1,16 +1,8 @@
-//import { Board } from "../state/board.mts";
-//import { Game } from "../state/game.mts";
 import { GameInstance } from "./game-instance.mts";
 import { ClientRequest } from "./models.mts";
 
 const port = 8080;
 
-//let whiteSocket: WebSocket;
-//let blackSocket: WebSocket;
-
-//const sockets: WebSocket[] = [];
-
-//const game = new Game(new Board());
 let game: GameInstance;
 
 function handleWs(sock: WebSocket) {
