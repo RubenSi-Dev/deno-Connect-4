@@ -26,7 +26,6 @@ Deno.test("Player moves are switching correctly", () => {
   assertEquals(game.getPlayerToMove(), "black");
   game.insertCoin("black", 4);
   assertEquals(game.getPlayerToMove(), "white");
-  console.log(game.getBoard());
 });
 
 Deno.test("Player move throws when its not the players turn", () => {
