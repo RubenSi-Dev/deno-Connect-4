@@ -19,12 +19,23 @@ function handleWs(sock: WebSocket, gameUUID: string) {
   };
 
   sock.onmessage = (e) => {
+    // Try to recover requestId even if handling fails, so the client's
+    // awaited request() can resolve instead of hanging forever.
+    let requestId: string | undefined;
+    try {
+      const raw = JSON.parse(e.data);
+      requestId = raw?.requestId;
+    } catch { /* ignore parse errors here, handled below */ }
+
     try {
       const msg = JSON.parse(e.data) as ClientRequest;
-      if (!game.gameHasStarted()) game.startGame();
       game.handleRequest(sock, msg);
     } catch (err) {
-      sock.send(String(err));
+      const errorResponse = JSON.stringify({
+        requestId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (sock.readyState === WebSocket.OPEN) sock.send(errorResponse);
     }
   };
 }
@@ -42,7 +53,6 @@ Deno.serve({ port }, (req) => {
     // Reserve the slot with a temporary placeholder so the UUID is valid
     // before the WebSocket connection is established.
     games.set(uuid, null);
-		console.log(games);
     return new Response(JSON.stringify({ gameId: uuid }), {
       status: 201,
       headers: { "content-type": "application/json" },
