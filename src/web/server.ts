@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { GameInstance } from "./game-instance.mts";
-import { ClientRequest } from "./models.mts";
+import { ClientRequest, GameError } from "./models.mts";
+import { ServerResponse } from "./models.mts";
 
 const port = 8080;
 
@@ -25,17 +26,47 @@ function handleWs(sock: WebSocket, gameUUID: string) {
     try {
       const raw = JSON.parse(e.data);
       requestId = raw?.requestId;
-    } catch { /* ignore parse errors here, handled below */ }
+    } catch {
+      const errorResponse: ServerResponse = {
+        type: "ERROR",
+        payload: {
+          code: "INVALID_REQ_ID",
+          explanation:
+            "there was no request id in one of your requests, or it was invalid",
+        },
+      };
+      if (sock.readyState === WebSocket.OPEN) {
+        sock.send(JSON.stringify(errorResponse));
+      }
+    }
 
     try {
       const msg = JSON.parse(e.data) as ClientRequest;
       game.handleRequest(sock, msg);
     } catch (err) {
-      const errorResponse = JSON.stringify({
-        requestId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (sock.readyState === WebSocket.OPEN) sock.send(errorResponse);
+      let errorResponse: ServerResponse;
+      if (err instanceof GameError) {
+        errorResponse = {
+          type: "ERROR",
+          requestId: requestId,
+          payload: {
+            code: err.gameErrorCode,
+            explanation: err.message,
+          },
+        };
+      } else {
+        errorResponse = {
+          type: "ERROR",
+          requestId: requestId,
+          payload: {
+            code: "UNKNOWN",
+            explanation: "unknown error",
+          },
+        };
+      }
+      if (sock.readyState === WebSocket.OPEN) {
+        sock.send(JSON.stringify(errorResponse));
+      }
     }
   };
 }

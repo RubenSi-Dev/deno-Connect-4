@@ -1,3 +1,4 @@
+import { GameError } from "../web/models.mts";
 import type { color, square } from "./types.mts";
 
 export abstract class BoardBase {
@@ -18,7 +19,7 @@ export class Board extends BoardBase {
         { length: cols },
         () => new Array(rows).fill(null),
       );
-    } else throw new Error("invalid setup");
+    } else throw new GameError("INVALID_REQUEST", "invalid setup");
   }
 
   isOver(): color | "stalemate" | undefined {
@@ -80,11 +81,13 @@ export class Board extends BoardBase {
 
   public insertCoin(color: color, column: number): void {
     if (column < 0 || column >= this.board.length) {
-      throw new Error("not a valid column");
+      throw new GameError("INVALID_MOVE", "not a valid column");
     }
     const row = this.board[column];
     let insertIndex = row.findIndex((r) => r !== null) - 1;
-    if (insertIndex === -1) throw new Error("row already full");
+    if (insertIndex === -1) {
+      throw new GameError("INVALID_MOVE", "row already full");
+    }
     if (insertIndex === -2) insertIndex = row.length - 1;
     row[insertIndex] = color;
     this.board[column] = row;

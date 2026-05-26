@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ServerResponse } from "./models.mts";
+import { GameError, ServerResponseOld } from "./models.mts";
 import type { color } from "../state/types.mts";
 
 const res = await fetch("http://localhost:8080/games", { method: "POST" }).then(
@@ -19,13 +19,13 @@ function request(
   ws: WebSocket,
   type: string,
   extra?: Record<string, string | number>,
-): Promise<ServerResponse> {
-  return new Promise<ServerResponse>((resolve) => {
+): Promise<ServerResponseOld> {
+  return new Promise<ServerResponseOld>((resolve) => {
     const requestId = randomUUID();
 
     const handler = (e: MessageEvent) => {
       try {
-        const msg = JSON.parse(e.data) as ServerResponse;
+        const msg = JSON.parse(e.data) as ServerResponseOld;
         if (msg.requestId === requestId) {
           ws.removeEventListener("message", handler);
           resolve(msg);
@@ -44,7 +44,7 @@ async function matchColors(wss: WebSocket[]): Promise<Map<color, WebSocket>> {
   const result = new Map<color, WebSocket>();
   for (const ws of wss) {
     await request(ws, "getColor").then((r) => {
-      if (!r.color) throw new Error("invalid state");
+      if (!r.color) throw new GameError("INTERNAL_ERROR", "invalid state");
       result.set(r.color, ws);
     });
   }
@@ -70,9 +70,9 @@ console.log("Game started!");
 
 let resp = await request(p0, "startGame");
 const colormap = await matchColors([p0, p1, p2]);
-if (!resp.toMove) throw new Error("bad state");
+if (!resp.toMove) throw new GameError("INTERNAL_ERROR", "bad state");
 let playerToMove = colormap.get(resp.toMove);
-if (!playerToMove) throw new Error("bad state");
+if (!playerToMove) throw new GameError("INTERNAL_ERROR", "bad state");
 
 resp = await request(playerToMove, "insertCoin", { "row": 5 });
 

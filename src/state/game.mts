@@ -1,6 +1,7 @@
 import { BoardBase } from "./board.mts";
 import { color, colors, moveData, square } from "./types.mts";
 import { getBoardString } from "../utils/render.mts";
+import { GameError } from "../web/models.mts";
 
 export interface GameInterface {
   // returns which player's move it is
@@ -40,13 +41,26 @@ export class Game implements GameInterface {
     playerCount: number = 2,
     playerToStart: color = "white",
   ) {
-    if (playerCount < 2) throw new Error("More than 2 players are required");
-    if (playerCount > colors.length) throw new Error("Choose less players");
+    if (playerCount < 2) {
+      throw new GameError(
+        "GAME_CANT_START",
+        "More than 2 players are required",
+      );
+    }
+    if (playerCount > colors.length) {
+      throw new GameError(
+        "GAME_CANT_START",
+        `More than 7 players is not supported`,
+      );
+    }
     this.players = colors.slice(0, playerCount);
 
     this.board = board;
     if (!this.players.includes(playerToStart)) {
-      throw new Error("player not available");
+      throw new GameError(
+        "INVALID_REQUEST",
+        "starter color not available as player",
+      );
     }
     this.playerToMoveIdx = this.players.findIndex((p) => p === playerToStart);
   }
@@ -80,8 +94,10 @@ export class Game implements GameInterface {
   }
 
   public insertCoin(player: color, col: number): boolean {
-    if (this.getPlayerToMove() !== player) throw new Error("Its not your turn");
-    if (this.isOver()) throw new Error("Game is over");
+    if (this.getPlayerToMove() !== player) {
+      throw new GameError("INVALID_REQUEST", "Its not your turn");
+    }
+    if (this.isOver()) throw new GameError("GAME_OVER", "Game is over");
     this.board.insertCoin(player, col);
 
     const win = this.board.isOver();

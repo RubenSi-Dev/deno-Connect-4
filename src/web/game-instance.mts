@@ -1,7 +1,12 @@
 import { Board } from "../state/board.mts";
 import { Game } from "../state/game.mts";
 import { color, colors } from "../state/types.mts";
-import { ClientRequest, GameSettings, ServerResponse } from "./models.mts";
+import {
+  ClientRequest,
+  GameError,
+  GameSettings,
+  ServerResponse,
+} from "./models.mts";
 
 export class GameInstance {
   private players: WebSocket[];
@@ -15,15 +20,11 @@ export class GameInstance {
   public playerJoin(sock: WebSocket) {
     this.players.push(sock);
     sock.addEventListener("open", () => {
-      this.players.forEach((p) => {
-        if (p !== sock && p.readyState === WebSocket.OPEN) {
-          p.send(
-            JSON.stringify({
-              event: "playerJoined",
-              playerCount: this.players.length,
-            }),
-          );
-        }
+      this.broadcastResponse({
+        type: "PLAYER_JOINED",
+        payload: {
+          playerCount: this.players.length,
+        },
       });
     }, { once: true });
     console.log("new player joins");
@@ -31,6 +32,12 @@ export class GameInstance {
 
   public playerLeave(sock: WebSocket) {
     this.players = this.players.filter((playerSocket) => playerSocket !== sock);
+    this.broadcastResponse({
+      type: "PLAYER_LEFT",
+      payload: {
+        playerCount: this.players.length,
+      },
+    });
     console.log("player leaves");
   }
 
@@ -50,10 +57,10 @@ export class GameInstance {
     return colors[this.players.findIndex((p) => p === player)];
   }
 
-  private broadcastResponse(resp: ServerResponse): void {
+  private broadcastResponse(resp: ServerResponse, exclude?: WebSocket): void {
     const msg = JSON.stringify(resp);
     this.players.forEach((p) => {
-      if (p.readyState === WebSocket.OPEN) p.send(msg);
+      if (p !== exclude && p.readyState === WebSocket.OPEN) p.send(msg);
     });
   }
 
@@ -66,57 +73,60 @@ export class GameInstance {
   }
 
   public handleRequest(player: WebSocket, req: ClientRequest): void {
+    if (!req.requestId) {
+      throw new GameError("INVALID_REQUEST", "please generate a request id");
+    }
     switch (req.type) {
       case "startGame": {
         if (this.playerIsStarter(player) && !this.gameHasStarted()) {
           this.startGame();
-        } else {throw new Error(
+        } else {throw new GameError(
+            "INVALID_REQUEST",
             "game already has started or you are not starter",
           );}
+        const response: ServerResponse = {
+          type: "GAME_STARTED",
+          payload: {
+            board: this.game!.getBoard(),
+            toMove: this.game!.getPlayerToMove(),
+          },
+        };
         // Ack only the requester with their requestId
-        this.sendResponse({
-          requestId: req.requestId,
-          toMove: this.game!.getPlayerToMove(),
-          data: this.game!.getBoard(),
-        }, player);
+        this.sendResponse({ requestId: req.requestId, ...response }, player);
+
         // Broadcast game-started event to everyone else (no requestId)
-        this.broadcastResponse({
-          toMove: this.game!.getPlayerToMove(),
-          data: this.game!.getBoard(),
-        });
+        this.broadcastResponse(response, player);
         return;
       }
     }
 
-    if (!this.game) throw new Error("game has not started yet");
+    if (!this.game) {
+      throw new GameError("GAME_NOT_STARTED", "game has not started yet");
+    }
 
     switch (req.type) {
       case "insertCoin": {
         const playerColor = this.getPlayerColor(player);
         this.game.insertCoin(playerColor, Number(req["row"]));
         const response: ServerResponse = {
-          requestId: req.requestId,
-          toMove: this.game.getPlayerToMove(),
-          data: this.game.getBoard(),
+          type: "STATE_UPDATE",
+          payload: {
+            board: this.game.getBoard(),
+            toMove: this.game.getPlayerToMove(),
+          },
         };
-        this.broadcastResponse(response);
+        this.sendResponse({ requestId: req.requestId, ...response }, player);
+        this.broadcastResponse(response, player);
         break;
       }
 
       case "getHistory": {
         const response: ServerResponse = {
+          type: "HISTORY",
           requestId: req.requestId,
-          toMove: this.game.getPlayerToMove(),
-          winner: this.game.isOver(),
-          data: this.game.getHistory(),
-        };
-        this.sendResponse(response, player);
-        break;
-      }
-      case "getColor": {
-        const response: ServerResponse = {
-          requestId: req.requestId,
-          color: this.getPlayerColor(player),
+          payload: {
+            data: this.game.getHistory(),
+          },
         };
         this.sendResponse(response, player);
         break;
@@ -124,11 +134,14 @@ export class GameInstance {
 
       case "getContext": {
         const response: ServerResponse = {
+          type: "CONTEXT_UPDATE",
           requestId: req.requestId,
-          color: this.getPlayerColor(player),
-          toMove: this.game.getPlayerToMove(),
-          winner: this.game.isOver(),
-          data: this.game.getBoard(),
+          payload: {
+            yourColor: this.getPlayerColor(player),
+            toMove: this.game.getPlayerToMove(),
+            moveCount: this.game.getHistory().length,
+            playerCount: this.players.length,
+          },
         };
         this.sendResponse(response, player);
         break;
