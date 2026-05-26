@@ -7,6 +7,15 @@ const res = await fetch("http://localhost:8080/games", { method: "POST" }).then(
 ).then((d) => d.gameId);
 console.log("Game ID:", res);
 
+/**
+ * Opens a WebSocket connection to the given URL and resolves when the
+ * connection is fully established (`"open"` event fires).
+ *
+ * @param url - The WebSocket URL to connect to (e.g. `"ws://localhost:8080/games/:id/ws"`).
+ * @returns A promise that resolves with the open {@link WebSocket} instance.
+ * @throws The underlying {@link Event} if the socket emits an `"error"` event
+ *   before opening.
+ */
 function connectWebSocket(url: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
@@ -15,6 +24,22 @@ function connectWebSocket(url: string): Promise<WebSocket> {
   });
 }
 
+/**
+ * Sends a typed request over an open WebSocket and returns a promise that
+ * resolves with the first server response whose `requestId` matches the one
+ * generated for this call.
+ *
+ * Each call generates a unique UUID as the `requestId` and attaches a
+ * one-shot message listener that resolves only when a matching reply arrives.
+ * Unrelated or non-JSON messages are silently ignored.
+ *
+ * @param ws - An open {@link WebSocket} connected to the game server.
+ * @param type - The request type string (e.g. `"insertCoin"`, `"startGame"`).
+ * @param extra - Optional additional fields to merge into the request payload
+ *   (e.g. `{ row: 3 }` for `"insertCoin"`).
+ * @returns A promise that resolves with the {@link ServerResponseOld} whose
+ *   `requestId` matches the generated ID.
+ */
 function request(
   ws: WebSocket,
   type: string,
@@ -40,6 +65,16 @@ function request(
   });
 }
 
+/**
+ * Queries each WebSocket in `wss` for its assigned player color and returns a
+ * map from color to socket for convenient turn-routing.
+ *
+ * @param wss - Array of open {@link WebSocket} connections to query.
+ * @returns A promise that resolves with a `Map<color, WebSocket>` where each
+ *   entry maps a player's {@link color} to their socket.
+ * @throws {@link GameError} with code `INTERNAL_ERROR` if any socket responds
+ *   without a valid color.
+ */
 async function matchColors(wss: WebSocket[]): Promise<Map<color, WebSocket>> {
   const result = new Map<color, WebSocket>();
   for (const ws of wss) {
