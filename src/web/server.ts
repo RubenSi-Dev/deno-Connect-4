@@ -1,12 +1,34 @@
 import { randomUUID } from "node:crypto";
 import { GameInstance } from "./game-instance.mts";
-import { ClientRequest, GameError } from "./models.mts";
+import { ClientRequest } from "./models.mts";
 import { ServerResponse } from "./models.mts";
+import { GameError } from "../utils/game-error.mts";
 
 const port = 8080;
 
+/** Registry of all active game sessions, keyed by their UUID.
+ * A `null` value means the game slot has been reserved (UUID issued) but the
+ * creator's WebSocket connection has not yet been established. */
 const games = new Map<string, GameInstance | null>();
 
+/**
+ * Attaches WebSocket event handlers (`onclose`, `onmessage`) to an already
+ * upgraded socket and wires it into the existing {@link GameInstance} for the
+ * given game UUID.
+ *
+ * On each incoming message the handler attempts to:
+ * 1. Parse the raw JSON to recover the `requestId` (for error correlation).
+ * 2. Fully parse the message as a {@link ClientRequest} and forward it to
+ *    {@link GameInstance.handleRequest}.
+ *
+ * Any {@link GameError} thrown during handling is serialised as an `"ERROR"`
+ * response and sent back to the client. Unknown errors are caught and reported
+ * with the `"UNKNOWN"` error code.
+ *
+ * @param sock - The upgraded WebSocket for this player connection.
+ * @param gameUUID - The UUID of the game the socket should be attached to.
+ *   If no game with this UUID exists the socket is closed with code `1011`.
+ */
 function handleWs(sock: WebSocket, gameUUID: string) {
   const game = games.get(gameUUID);
   if (!game) {
@@ -71,6 +93,25 @@ function handleWs(sock: WebSocket, gameUUID: string) {
   };
 }
 
+/**
+ * HTTP + WebSocket server for Connect Four.
+ *
+ * Supported endpoints:
+ *
+ * ### `POST /games`
+ * Creates a new game session. Returns `201` with `{ gameId: string }`.
+ * The UUID is reserved immediately; the creator must connect via WebSocket
+ * before the slot is fully initialised.
+ *
+ * ### `GET /games/:uuid/ws`
+ * Upgrades the connection to a WebSocket and adds the client to the game
+ * identified by `uuid`.
+ * - The **first** client to connect becomes the game creator.
+ * - Subsequent clients join as additional players.
+ * Returns `404` if the UUID is not found.
+ *
+ * All other routes return `404`.
+ */
 Deno.serve({ port }, (req) => {
   const url = new URL(req.url);
   const method = req.method;
