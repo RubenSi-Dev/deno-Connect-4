@@ -75,11 +75,9 @@ export interface GameInterface {
    */
   getPlayers(): (color | null)[];
 
+  removePlayerByIndex(index: number): void;
 
-	removePlayerByIndex(index: number): void;
-
-	removePlayerByColor(color: color): void;
-
+  removePlayerByColor(color: color): void;
 }
 
 /**
@@ -136,11 +134,11 @@ export class Game implements GameInterface {
   }
 
   removePlayerByIndex(index: number): void {
-		this.players[index] = null;
+    this.players[index] = null;
   }
 
   removePlayerByColor(color: color): void {
-		this.removePlayerByIndex(this.players.findIndex(p => p === color));
+    this.removePlayerByIndex(this.players.findIndex((p) => p === color));
   }
 
   /**
@@ -167,10 +165,10 @@ export class Game implements GameInterface {
    * @returns The current player's {@link color}.
    */
   public getPlayerToMove(): color {
-		const result = this.players[this.playerToMoveIdx];
-		if (!result) {
-			throw new GameError("INTERNAL_ERROR", "Player not available");
-		}
+    const result = this.players[this.playerToMoveIdx];
+    if (!result) {
+      throw new GameError("INTERNAL_ERROR", "Player not available");
+    }
     return result;
   }
 
@@ -179,15 +177,15 @@ export class Game implements GameInterface {
    * player back to index 0.
    */
   private switchTurn(): void {
-		const result = this.playerToMoveIdx + 1 >= this.players.length
+    const result = this.playerToMoveIdx + 1 >= this.players.length
       ? 0
       : this.playerToMoveIdx + 1;
 
-		if (!this.players[result]) {
-			this.switchTurn()
-		} else {
-			this.playerToMoveIdx = result;
-		}
+    if (!this.players[result]) {
+      this.switchTurn();
+    } else {
+      this.playerToMoveIdx = result;
+    }
   }
 
   /**

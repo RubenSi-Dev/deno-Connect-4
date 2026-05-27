@@ -61,7 +61,7 @@ export class GameInstance {
         return null;
       }
     });
-		this.game
+    this.game;
     this.broadcastResponse({
       type: "PLAYER_LEFT",
       payload: {
