@@ -15,7 +15,7 @@ import { GameError } from "../utils/game-error.mts";
  */
 export class GameInstance {
   /** Ordered list of connected player WebSockets; index maps to player color. */
-  private players: WebSocket[];
+  private players: (WebSocket | null)[];
   /** The active game, or `undefined` before {@link startGame} is called. */
   private game: Game | undefined;
 
@@ -36,12 +36,30 @@ export class GameInstance {
    * @param sock - The WebSocket of the joining player.
    */
   public playerJoin(sock: WebSocket) {
-    this.players.push(sock);
+    if (this.playersAmount() >= colors.length) {
+      sock.addEventListener("open", () => {
+        this.sendResponse({
+          type: "ERROR",
+          payload: {
+            code: "GAME_FULL",
+            explanation: "This game instance is already full",
+          },
+        }, sock);
+      }, { once: true });
+      return;
+    }
+    // If a player has left in the past, fill in his gap
+    const idx = this.players.findIndex((p) => p === null);
+    if (idx !== -1) {
+      this.players[idx] = sock;
+    } else {
+      this.players.push(sock);
+    }
     sock.addEventListener("open", () => {
       this.broadcastResponse({
         type: "PLAYER_JOINED",
         payload: {
-          playerCount: this.players.length,
+          playerCount: this.playersAmount(),
         },
       });
     }, { once: true });
@@ -56,16 +74,17 @@ export class GameInstance {
    */
   public playerLeave(sock: WebSocket) {
     //this.players = this.players.filter((playerSocket) => playerSocket !== sock);
-    this.players.map((p) => {
+    this.players = this.players.map((p) => {
       if (p === sock) {
         return null;
       }
+      return sock;
     });
     this.game;
     this.broadcastResponse({
       type: "PLAYER_LEFT",
       payload: {
-        playerCount: this.players.length,
+        playerCount: this.playersAmount(),
       },
     });
     console.log("player leaves");
@@ -96,6 +115,10 @@ export class GameInstance {
     return this.game !== undefined;
   }
 
+  private playersAmount(): number {
+    return this.players.reduce((acc, pl) => acc + (pl ? 1 : 0), 0);
+  }
+
   /**
    * Resolves the color assigned to a given player socket based on its
    * position in the join-order list.
@@ -118,7 +141,7 @@ export class GameInstance {
   private broadcastResponse(resp: ServerResponse, exclude?: WebSocket): void {
     const msg = JSON.stringify(resp);
     this.players.forEach((p) => {
-      if (p !== exclude && p.readyState === WebSocket.OPEN) p.send(msg);
+      if (p && p !== exclude && p.readyState === WebSocket.OPEN) p.send(msg);
     });
   }
 
@@ -230,7 +253,7 @@ export class GameInstance {
             yourColor: this.getPlayerColor(player),
             toMove: this.game.getPlayerToMove(),
             moveCount: this.game.getHistory().length,
-            playerCount: this.players.length,
+            playerCount: this.playersAmount(),
           },
         };
         this.sendResponse(response, player);

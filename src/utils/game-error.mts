@@ -35,5 +35,6 @@ export type ErrorCode =
   | "INTERNAL_ERROR"
   | "GAME_CANT_START"
   | "GAME_OVER"
+  | "GAME_FULL"
   | "INVALID_REQ_ID"
   | "UNKNOWN";

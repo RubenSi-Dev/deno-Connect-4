@@ -1,21 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { ServerResponse } from "../server/models.mts";
 
-export async function connectWebSocket(url: string): Promise<WebSocket> {
-  await Promise.resolve();
+export function connectWebSocket(
+  url: string,
+  onMessage?: (e: MessageEvent) => void,
+): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(url);
     ws.addEventListener("open", () => resolve(ws), { once: true });
     ws.addEventListener("error", (e) => reject(e), { once: true });
+    if (onMessage) {
+      ws.addEventListener("message", onMessage);
+    }
   });
 }
 
-export async function request(
+export function request(
   ws: WebSocket,
   type: string,
   extra?: Record<string, string | number>,
 ): Promise<ServerResponse> {
-  await Promise.resolve();
   return new Promise<ServerResponse>((resolve) => {
     const requestId = randomUUID();
 

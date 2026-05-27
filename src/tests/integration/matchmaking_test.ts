@@ -9,9 +9,24 @@ const serverProcess = new Deno.Command(Deno.execPath(), {
   stderr: "inherit",
 }).spawn();
 
+async function delay(ms: number): Promise<void> {
+  await Promise.resolve(new Promise((resolve) => setTimeout(resolve, ms)));
+}
+
 Deno.test.beforeEach(async () => {
   await delay(500);
 });
+
+Deno.test.afterAll(() => {
+  serverProcess.kill("SIGTERM");
+});
+
+function createGame(): Promise<string> {
+  return fetch("http://localhost:8080/games", { method: "POST" })
+    .then(
+      (r) => r.json() as Promise<{ gameId: string }>,
+    ).then((d) => d.gameId);
+}
 
 Deno.test("creating games works", async () => {
   const res = await fetch("http://localhost:8080/games", { method: "POST" })
@@ -21,11 +36,20 @@ Deno.test("creating games works", async () => {
   assertExists(res);
 });
 
+Deno.test("Too much players join", async () => {
+  const key = await createGame();
+  const url = `ws://localhost:8080/games/${key}/ws`;
+
+  const players: WebSocket[] = [];
+  for (let i = 0; i < 10; i++) {
+    players.push(
+      await connectWebSocket(url, (e) => console.log(`player ${i}: ${e.data}`)),
+    );
+  }
+});
+
 Deno.test("creating a game and then joining and eventually starting the game", async () => {
-  const key = await fetch("http://localhost:8080/games", { method: "POST" })
-    .then(
-      (r) => r.json() as Promise<{ gameId: string }>,
-    ).then((d) => d.gameId);
+  const key = await createGame();
 
   const wsMessages = new Map<string, ServerResponse[]>([["ws1", []], [
     "ws2",
@@ -84,11 +108,3 @@ Deno.test("creating a game and then joining and eventually starting the game", a
   assertEquals(lastws2payload.toMove, "white");
   assertEquals(lastws3payload.toMove, "white");
 });
-
-Deno.test.afterAll(() => {
-  serverProcess.kill("SIGTERM");
-});
-
-async function delay(ms: number): Promise<void> {
-  await Promise.resolve(new Promise((resolve) => setTimeout(resolve, ms)));
-}
