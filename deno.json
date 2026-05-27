@@ -3,6 +3,12 @@
     "dev": "deno run --watch --allow-net src/web/server.ts",
     "server": "deno run --allow-net src/web/server.ts"
   },
+  "test": {
+    "permissions": {
+      "net": true,
+      "run": true
+    }
+  },
   "imports": {
     "@std/assert": "jsr:@std/assert@^1.0.19"
   }
