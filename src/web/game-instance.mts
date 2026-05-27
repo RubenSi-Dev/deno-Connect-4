@@ -1,12 +1,8 @@
 import { Board } from "../state/board.mts";
 import { Game } from "../state/game.mts";
 import { color, colors } from "../state/types.mts";
-import {
-  ClientRequest,
-  GameError,
-  GameSettings,
-  ServerResponse,
-} from "./models.mts";
+import { ClientRequest, GameSettings, ServerResponse } from "./models.mts";
+import { GameError } from "../utils/game-error.mts";
 
 /**
  * Manages a single Connect Four game session including the set of connected
@@ -59,7 +55,13 @@ export class GameInstance {
    * @param sock - The WebSocket of the player who left.
    */
   public playerLeave(sock: WebSocket) {
-    this.players = this.players.filter((playerSocket) => playerSocket !== sock);
+    //this.players = this.players.filter((playerSocket) => playerSocket !== sock);
+    this.players.map((p) => {
+      if (p === sock) {
+        return null;
+      }
+    });
+		this.game
     this.broadcastResponse({
       type: "PLAYER_LEFT",
       payload: {

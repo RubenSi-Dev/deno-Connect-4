@@ -1,7 +1,7 @@
 import { BoardBase } from "./board.mts";
 import { color, colors, moveData, square } from "./types.mts";
 import { getBoardString } from "../utils/render.mts";
-import { GameError } from "../web/models.mts";
+import { GameError } from "../utils/game-error.mts";
 
 /**
  * Public interface that every Connect Four game implementation must satisfy.
@@ -73,7 +73,13 @@ export interface GameInterface {
    *
    * @returns An array of player {@link color} values.
    */
-  getPlayers(): color[];
+  getPlayers(): (color | null)[];
+
+
+	removePlayerByIndex(index: number): void;
+
+	removePlayerByColor(color: color): void;
+
 }
 
 /**
@@ -83,7 +89,7 @@ export interface GameInterface {
  */
 export class Game implements GameInterface {
   private board: BoardBase;
-  private players: color[];
+  private players: (color | null)[];
   private playerToMoveIdx: number = 0;
   private history: moveData[] = [];
   private moveCount: number = 0;
@@ -129,12 +135,20 @@ export class Game implements GameInterface {
     this.playerToMoveIdx = this.players.findIndex((p) => p === playerToStart);
   }
 
+  removePlayerByIndex(index: number): void {
+		this.players[index] = null;
+  }
+
+  removePlayerByColor(color: color): void {
+		this.removePlayerByIndex(this.players.findIndex(p => p === color));
+  }
+
   /**
    * Returns an ordered copy of the player list.
    *
    * @returns An array of player {@link color} values.
    */
-  public getPlayers(): color[] {
+  public getPlayers(): (color | null)[] {
     return Array.from(this.players);
   }
 
@@ -153,7 +167,11 @@ export class Game implements GameInterface {
    * @returns The current player's {@link color}.
    */
   public getPlayerToMove(): color {
-    return this.players[this.playerToMoveIdx];
+		const result = this.players[this.playerToMoveIdx];
+		if (!result) {
+			throw new GameError("INTERNAL_ERROR", "Player not available");
+		}
+    return result;
   }
 
   /**
@@ -161,9 +179,15 @@ export class Game implements GameInterface {
    * player back to index 0.
    */
   private switchTurn(): void {
-    this.playerToMoveIdx = this.playerToMoveIdx + 1 >= this.players.length
+		const result = this.playerToMoveIdx + 1 >= this.players.length
       ? 0
       : this.playerToMoveIdx + 1;
+
+		if (!this.players[result]) {
+			this.switchTurn()
+		} else {
+			this.playerToMoveIdx = result;
+		}
   }
 
   /**

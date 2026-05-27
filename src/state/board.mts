@@ -1,5 +1,5 @@
-import { GameError } from "../web/models.mts";
 import type { color, square } from "./types.mts";
+import { GameError } from "../utils/game-error.mts";
 
 /**
  * Abstract base class that defines the contract for a Connect Four board.

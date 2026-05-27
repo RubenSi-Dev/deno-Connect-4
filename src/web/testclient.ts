@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { GameError, ServerResponseOld } from "./models.mts";
+import { ServerResponseOld } from "./models.mts";
 import type { color } from "../state/types.mts";
+import { GameError } from "../utils/game-error.mts";
 
 const res = await fetch("http://localhost:8080/games", { method: "POST" }).then(
   (r) => r.json() as Promise<{ gameId: string }>,
