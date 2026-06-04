@@ -162,6 +162,8 @@ interface ServerResponseStateUpdate extends ServerResponseBase {
     toMove: color;
     /** The updated board state after the last move. */
     board: square[][];
+    /** The number of the move */
+    move: number;
   };
 }
 

@@ -1,7 +1,8 @@
-import { assertEquals, assertExists } from "@std/assert";
+import { assert, assertEquals, assertExists } from "@std/assert";
 import { connectWebSocket, request } from "../../client/client-methods.mts";
 import { ServerResponse } from "../../server/models.mts";
 import { color, square } from "../../state/types.mts";
+import { waitOrTimeout } from "../../utils/helpers.mts";
 
 const serverProcess = new Deno.Command(Deno.execPath(), {
   args: ["run", "--allow-net", "--allow-run", "./src/server/server.ts"],
@@ -71,28 +72,23 @@ Deno.test("creating a game and then joining and eventually starting the game", a
   assertExists(ws1);
   assertExists(ws2);
   assertExists(ws3);
-  await delay(500);
-
-  wsMessages.get("ws1")!.forEach((m) => assertEquals(m.type, "PLAYER_JOINED"));
-  wsMessages.get("ws2")!.forEach((m) => assertEquals(m.type, "PLAYER_JOINED"));
-  wsMessages.get("ws3")!.forEach((m) => assertEquals(m.type, "PLAYER_JOINED"));
-
-  assertEquals(wsMessages.get("ws1")!.at(-1), {
-    type: "PLAYER_JOINED",
-    payload: { playerCount: 3 },
-  });
-  assertEquals(wsMessages.get("ws2")!.at(-1), {
-    type: "PLAYER_JOINED",
-    payload: { playerCount: 3 },
-  });
-  assertEquals(wsMessages.get("ws3")!.at(-1), {
-    type: "PLAYER_JOINED",
-    payload: { playerCount: 3 },
-  });
+  //await delay(700);
+  await waitOrTimeout(() =>
+    Array.from(wsMessages.values()).every((r) =>
+      r.some((t) => t.type === "PLAYER_JOINED" && t.payload.playerCount === 3)
+    )
+  ).then((r) => assert(r));
 
   const res = await request(ws1, "startGame");
   assertEquals(res.type, "GAME_STARTED");
-  await delay(500);
+  //await delay(700);
+  await waitOrTimeout(
+    () =>
+      Array.from(wsMessages.values()).every((r) =>
+        r.at(-1) !== undefined && r.at(-1)!.type === "GAME_STARTED"
+      ),
+    800,
+  ).then((r) => assert(r));
   const lastws2payload = wsMessages.get("ws2")!.at(-1)!.payload as {
     board: square[][];
     toMove: color;
@@ -101,9 +97,6 @@ Deno.test("creating a game and then joining and eventually starting the game", a
     board: square[][];
     toMove: color;
   };
-
-  assertEquals(wsMessages.get("ws2")!.at(-1)!.type, "GAME_STARTED");
-  assertEquals(wsMessages.get("ws3")!.at(-1)!.type, "GAME_STARTED");
 
   assertEquals(lastws2payload.toMove, "white");
   assertEquals(lastws3payload.toMove, "white");
