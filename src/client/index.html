@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Connect Four — Multiplayer</title>
+    <meta
+      name="description"
+      content="Play Connect Four online in real-time with friends using WebSocket-powered multiplayer."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0a0b14;
+        --surface: #111220;
+        --surface2: #181929;
+        --border: rgba(255, 255, 255, 0.07);
+        --accent: #6c63ff;
+        --accent2: #a78bfa;
+        --text: #e8e8f0;
+        --muted: #6b6b8a;
+        --radius: 16px;
+        --radius-sm: 10px;
+      }
+
+      body {
+        font-family: "Outfit", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 24px 16px 48px;
+        background-image:
+          radial-gradient(
+            ellipse 80% 50% at 50% -10%,
+            rgba(108, 99, 255, 0.18) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+          ellipse 60% 40% at 80% 100%,
+          rgba(167, 139, 250, 0.1) 0%,
+          transparent 50%
+        );
+      }
+
+      /* ── Header ─────────────────────────────── */
+      header {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      header h1 {
+        font-size: clamp(2rem, 5vw, 3.2rem);
+        font-weight: 900;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #fff 30%, var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      header p {
+        color: var(--muted);
+        font-size: 1rem;
+        margin-top: 6px;
+      }
+
+      /* ── Cards ───────────────────────────────── */
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 28px 32px;
+        width: 100%;
+        max-width: 520px;
+        box-shadow: 0 8px 48px rgba(0, 0, 0, 0.4);
+      }
+      .card-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .card-title .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 10px var(--accent);
+      }
+
+      /* ── Lobby screen ────────────────────────── */
+      #lobby {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        width: 100%;
+        max-width: 520px;
+      }
+
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      input[type="text"] {
+        width: 100%;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 16px;
+        color: var(--text);
+        font-family: "Outfit", sans-serif;
+        font-size: 1rem;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+      input[type="text"]:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+      }
+      input[type="text"]::placeholder {
+        color: var(--muted);
+      }
+
+      /* ── Buttons ─────────────────────────────── */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: none;
+        border-radius: var(--radius-sm);
+        padding: 13px 24px;
+        font-family: "Outfit", sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: white;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .btn:hover::after {
+        opacity: 0.08;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+      .btn:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .btn:disabled:active {
+        transform: none;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #6c63ff, #a78bfa);
+        color: #fff;
+        box-shadow: 0 4px 24px rgba(108, 99, 255, 0.45);
+      }
+      .btn-primary:hover:not(:disabled) {
+        box-shadow: 0 6px 32px rgba(108, 99, 255, 0.6);
+      }
+      .btn-secondary {
+        background: var(--surface2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .btn-success {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+        box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
+      }
+      .btn-danger {
+        background: linear-gradient(135deg, #dc2626, #ef4444);
+        color: #fff;
+      }
+      .btn-full {
+        width: 100%;
+      }
+
+      .divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+      .divider::before, .divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--border);
+      }
+
+      /* ── Status bar ──────────────────────────── */
+      .status-bar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 16px;
+        font-size: 0.9rem;
+      }
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+      }
+      .status-badge .pip {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        animation: pulse-pip 1.5s ease-in-out infinite;
+      }
+      @keyframes pulse-pip {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* ── Game screen ─────────────────────────── */
+      #game {
+        display: none;
+        width: 100%;
+        max-width: 760px;
+      }
+
+      .game-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      .player-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .color-swatch {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 3px solid rgba(255, 255, 255, 0.15);
+        flex-shrink: 0;
+      }
+
+      /* ── Turn indicator ──────────────────────── */
+      #turn-indicator {
+        text-align: center;
+        margin-bottom: 16px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        transition: color 0.4s;
+        min-height: 28px;
+      }
+
+      /* ── Board ───────────────────────────────── */
+      #board-wrap {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 20px;
+        box-shadow: 0 8px 48px rgba(0, 0, 0, 0.5);
+      }
+      #col-buttons {
+        display: grid;
+        margin-bottom: 8px;
+        gap: 6px;
+      }
+      .col-btn {
+        height: 34px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s, border-color 0.15s, transform 0.15s;
+        color: var(--muted);
+        font-size: 1.1rem;
+      }
+      .col-btn:hover:not(:disabled) {
+        background: rgba(108, 99, 255, 0.12);
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateY(-3px);
+      }
+      .col-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.25;
+      }
+
+      #board-grid {
+        display: grid;
+        gap: 6px;
+        overflow: hidden;
+      }
+
+      .cell {
+        aspect-ratio: 1;
+        border-radius: 50%;
+        background: var(--surface2);
+        border: 2px solid rgba(255, 255, 255, 0.05);
+      }
+      .cell.dropping {
+        animation: coin-fall 0.42s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+      }
+      @keyframes coin-fall {
+        0% {
+          transform: translateY(calc(-1 * var(--fall-dist, 200px)));
+        }
+        85% {
+          transform: translateY(6px);
+        }
+        100% {
+          transform: translateY(0);
+        }
+      }
+
+      /* player color classes */
+      .color-white {
+        background: #f0f0f8;
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+      .color-black {
+        background: #3a3a55;
+        border-color: rgba(100, 100, 160, 0.5);
+      }
+      .color-blue {
+        background: #3b82f6;
+        border-color: rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+      }
+      .color-red {
+        background: #ef4444;
+        border-color: rgba(239, 68, 68, 0.6);
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+      }
+      .color-green {
+        background: #22c55e;
+        border-color: rgba(34, 197, 94, 0.6);
+        box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+      }
+      .color-yellow {
+        background: #eab308;
+        border-color: rgba(234, 179, 8, 0.6);
+        box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+      }
+
+      /* ── Controls ────────────────────────────── */
+      #game-controls {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 18px;
+      }
+
+      /* ── Players panel ───────────────────────── */
+      #players-panel {
+        margin-top: 18px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 16px 20px;
+      }
+      .players-title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+      }
+      .player-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.95rem;
+        padding: 6px 0;
+      }
+      .player-row + .player-row {
+        border-top: 1px solid var(--border);
+      }
+      .player-row .name {
+        flex: 1;
+        font-weight: 600;
+      }
+      .tag {
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+        background: rgba(108, 99, 255, 0.18);
+        color: var(--accent2);
+        font-weight: 700;
+      }
+      .tag-move {
+        background: rgba(34, 197, 94, 0.18);
+        color: #22c55e;
+      }
+
+      /* ── Game over overlay ───────────────────── */
+      #game-over-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.72);
+        backdrop-filter: blur(8px);
+        align-items: center;
+        justify-content: center;
+      }
+      #game-over-overlay.show {
+        display: flex;
+      }
+      .game-over-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 40px 48px;
+        text-align: center;
+        max-width: 380px;
+        width: 90%;
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+        animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      @keyframes pop-in {
+        from {
+          transform: scale(0.7);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .go-icon {
+        font-size: 4rem;
+        margin-bottom: 16px;
+      }
+      .go-title {
+        font-size: 2rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff, var(--accent2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 8px;
+      }
+      .go-sub {
+        color: var(--muted);
+        font-size: 1rem;
+        margin-bottom: 28px;
+        line-height: 1.5;
+      }
+      .winner-swatch {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        margin: 0 auto 16px;
+        border: 4px solid rgba(255, 255, 255, 0.2);
+      }
+
+      /* ── Toast ───────────────────────────────── */
+      #toast-container {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 200;
+      }
+      .toast {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 18px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        max-width: 300px;
+        animation: toast-in 0.3s ease;
+      }
+      .toast.error {
+        border-left: 3px solid #ef4444;
+      }
+      .toast.info {
+        border-left: 3px solid var(--accent);
+      }
+      .toast.success {
+        border-left: 3px solid #22c55e;
+      }
+      @keyframes toast-in {
+        from {
+          transform: translateX(120%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+
+      /* ── Utils ───────────────────────────────── */
+      .hidden {
+        display: none !important;
+      }
+      .fade-in {
+        animation: fade-in 0.4s ease;
+      }
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (max-width: 500px) {
+        .card {
+          padding: 20px 18px;
+        }
+        #board-wrap {
+          padding: 12px;
+        }
+        .game-over-card {
+          padding: 28px 24px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Header ────────────────────────────────── -->
+    <header class="fade-in">
+      <h1>Connect Four</h1>
+      <p>Real-time multiplayer — drop your coins, win the row</p>
+    </header>
+
+    <!-- ════════════════════════════════════════════
+     LOBBY
+════════════════════════════════════════════ -->
+    <section id="lobby" class="fade-in">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>New Game</div>
+        <p style="color: var(--muted); font-size: 0.9rem; margin-bottom: 18px">
+          Create a lobby and share the Game ID with a friend.
+        </p>
+        <button id="create-btn" class="btn btn-primary btn-full">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          Create Game
+        </button>
+      </div>
+
+      <div class="divider">or join an existing game</div>
+
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Join Game</div>
+        <div class="input-group" style="margin-bottom: 16px">
+          <label for="game-id-input">Game ID</label>
+          <input
+            type="text"
+            id="game-id-input"
+            placeholder="Paste the Game ID here…"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+        <button id="join-btn" class="btn btn-secondary btn-full">
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+            <polyline points="10 17 15 12 10 7" />
+            <line x1="15" y1="12" x2="3" y2="12" />
+          </svg>
+          Join Game
+        </button>
+      </div>
+
+      <!-- Connecting status -->
+      <div id="connecting-card" class="card hidden">
+        <div class="status-bar">
+          <div class="status-badge">
+            <span class="pip" style="background: #6c63ff"></span>
+            <span id="connecting-label">Connecting…</span>
+          </div>
+          <button
+            id="copy-id-btn"
+            class="btn btn-secondary"
+            style="padding: 8px 14px; font-size: 0.85rem"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              />
+            </svg>
+            Copy ID
+          </button>
+        </div>
+        <div
+          id="game-id-display"
+          style="font-family: monospace; font-size: 0.8rem; color: var(--muted); margin-top: 10px; word-break: break-all"
+        >
+        </div>
+        <button
+          id="start-btn"
+          class="btn btn-success btn-full hidden"
+          style="margin-top: 14px"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          Start Game
+        </button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════
+     GAME SCREEN
+════════════════════════════════════════════ -->
+    <section id="game">
+      <div class="game-header">
+        <div class="player-info">
+          <div class="color-swatch" id="my-swatch"></div>
+          <div>
+            <div
+              style="font-weight: 700; font-size: 0.95rem"
+              id="my-color-label"
+            >
+              Your color: —
+            </div>
+            <div
+              style="font-size: 0.8rem; color: var(--muted)"
+              id="game-id-label"
+            >
+              Game ID: —
+            </div>
+          </div>
+        </div>
+        <button
+          id="leave-btn"
+          class="btn btn-danger"
+          style="padding: 9px 16px; font-size: 0.85rem"
+        >
+          Leave
+        </button>
+      </div>
+
+      <div id="turn-indicator">Waiting for game to start…</div>
+
+      <div id="board-wrap">
+        <div id="col-buttons"></div>
+        <div id="board-grid"></div>
+      </div>
+
+      <div id="game-controls">
+        <div
+          style="flex: 1; font-size: 0.85rem; color: var(--muted)"
+          id="move-counter"
+        >
+          Move 0
+        </div>
+        <button
+          id="history-btn"
+          class="btn btn-secondary"
+          style="padding: 9px 16px; font-size: 0.85rem"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="1 4 1 10 7 10" />
+            <path d="M3.51 15a9 9 0 1 0 .49-5.26" />
+          </svg>
+          History
+        </button>
+      </div>
+
+      <div id="players-panel">
+        <div class="players-title">Players</div>
+        <div id="player-list"></div>
+      </div>
+    </section>
+
+    <!-- ── Game Over Overlay ──────────────────── -->
+    <div id="game-over-overlay">
+      <div class="game-over-card">
+        <div id="go-icon" class="go-icon">🎉</div>
+        <div id="go-winner-swatch" class="winner-swatch hidden"></div>
+        <div id="go-title" class="go-title">Game Over</div>
+        <div id="go-sub" class="go-sub"></div>
+        <button id="go-close-btn" class="btn btn-primary">Play Again</button>
+      </div>
+    </div>
+
+    <!-- ── Toasts ─────────────────────────────── -->
+    <div id="toast-container"></div>
+
+    <script>
+      // ════════════════════════════════════════════════
+      //  Constants & configuration
+      // ════════════════════════════════════════════════
+      const WS_BASE = `${
+        location.protocol === "https:" ? "wss:" : "ws:"
+      }//${location.host}`;
+      const HTTP_BASE = location.origin; // same origin, always correct
+
+      const COLOR_HEX = {
+        white: "#f0f0f8",
+        black: "#3a3a55",
+        blue: "#3b82f6",
+        red: "#ef4444",
+        green: "#22c55e",
+        yellow: "#eab308",
+      };
+      const COLOR_ORDER = ["white", "black", "blue", "red", "green", "yellow"];
+
+      // ════════════════════════════════════════════════
+      //  App state
+      // ════════════════════════════════════════════════
+      const state = {
+        ws: null,
+        gameId: null,
+        isCreator: false,
+        myColor: null,
+        toMove: null,
+        board: null,
+        rows: 0,
+        cols: 0,
+        moveCount: 0,
+        playerCount: 0,
+        gameStarted: false,
+        gameOver: false,
+        pendingRequests: {},
+      };
+
+      // ════════════════════════════════════════════════
+      //  UI references (cached once)
+      // ════════════════════════════════════════════════
+      const $ = (id) => document.getElementById(id);
+      const ui = {
+        lobby: $("lobby"),
+        game: $("game"),
+        connectCard: $("connecting-card"),
+        connectLabel: $("connecting-label"),
+        gameIdDisplay: $("game-id-display"),
+        startBtn: $("start-btn"),
+        createBtn: $("create-btn"),
+        joinBtn: $("join-btn"),
+        gameIdInput: $("game-id-input"),
+        copyIdBtn: $("copy-id-btn"),
+        mySwatch: $("my-swatch"),
+        myColorLabel: $("my-color-label"),
+        gameIdLabel: $("game-id-label"),
+        turnIndicator: $("turn-indicator"),
+        colButtons: $("col-buttons"),
+        boardGrid: $("board-grid"),
+        moveCounter: $("move-counter"),
+        historyBtn: $("history-btn"),
+        playerList: $("player-list"),
+        gameOverOverlay: $("game-over-overlay"),
+        goIcon: $("go-icon"),
+        goWinnerSwatch: $("go-winner-swatch"),
+        goTitle: $("go-title"),
+        goSub: $("go-sub"),
+        goCloseBtn: $("go-close-btn"),
+        toastContainer: $("toast-container"),
+      };
+
+      // ════════════════════════════════════════════════
+      //  Toast helper
+      // ════════════════════════════════════════════════
+      function toast(msg, type = "info", duration = 4000) {
+        const el = document.createElement("div");
+        el.className = `toast ${type}`;
+        el.textContent = msg;
+        ui.toastContainer.appendChild(el);
+        setTimeout(() => el.remove(), duration);
+      }
+
+      // ════════════════════════════════════════════════
+      //  WebSocket helpers
+      // ════════════════════════════════════════════════
+      function wsSend(type, payload) {
+        if (!state.ws || state.ws.readyState !== WebSocket.OPEN) {
+          toast("Not connected to server", "error");
+          return Promise.reject(new Error("not connected"));
+        }
+        const requestId = crypto.randomUUID();
+        const msg = { type, requestId };
+        if (payload !== undefined) msg.payload = payload;
+
+        return new Promise((resolve) => {
+          state.pendingRequests[requestId] = { resolve };
+          state.ws.send(JSON.stringify(msg));
+        });
+      }
+
+      function handleWsMessage(raw) {
+        let msg;
+        try {
+          msg = JSON.parse(raw);
+        } catch {
+          return;
+        }
+
+        // Resolve matching pending request
+        if (msg.requestId && state.pendingRequests[msg.requestId]) {
+          state.pendingRequests[msg.requestId].resolve(msg);
+          delete state.pendingRequests[msg.requestId];
+        }
+
+        // Always dispatch for real-time events
+        dispatch(msg);
+      }
+
+      function dispatch(msg) {
+        switch (msg.type) {
+          case "GAME_STARTED":
+            onGameStarted(msg.payload);
+            break;
+          case "STATE_UPDATE":
+            onStateUpdate(msg.payload);
+            break;
+          case "GAME_OVER":
+            onGameOver(msg.payload);
+            break;
+          case "PLAYER_JOINED":
+            onPlayerJoined(msg.payload);
+            break;
+          case "PLAYER_LEFT":
+            onPlayerLeft(msg.payload);
+            break;
+          case "CONTEXT_UPDATE":
+            onContextUpdate(msg.payload);
+            break;
+          case "HISTORY":
+            onHistory(msg.payload);
+            break;
+          case "ERROR":
+            onServerError(msg.payload);
+            break;
+        }
+      }
+
+      // ════════════════════════════════════════════════
+      //  Connection management
+      // ════════════════════════════════════════════════
+      async function createGame() {
+        setLobbyBusy(true);
+        try {
+          const res = await fetch(`${HTTP_BASE}/games`, { method: "POST" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const { gameId } = await res.json();
+          await connectToGame(gameId, true);
+        } catch (e) {
+          toast("Failed to create game: " + e.message, "error");
+          setLobbyBusy(false);
+        }
+      }
+
+      async function joinGame(gameId) {
+        const id = gameId.trim();
+        if (!id) {
+          toast("Please enter a Game ID", "error");
+          return;
+        }
+        setLobbyBusy(true);
+        try {
+          await connectToGame(id, false);
+        } catch (e) {
+          toast("Failed to join: " + e.message, "error");
+          setLobbyBusy(false);
+        }
+      }
+
+      function connectToGame(gameId, isCreator) {
+        return new Promise((resolve, reject) => {
+          const ws = new WebSocket(`${WS_BASE}/games/${gameId}/ws`);
+          ws.addEventListener("open", () => {
+            state.ws = ws;
+            state.gameId = gameId;
+            state.isCreator = isCreator;
+            onConnected();
+            resolve();
+          }, { once: true });
+          ws.addEventListener(
+            "error",
+            () => reject(new Error("WebSocket failed")),
+            { once: true },
+          );
+          ws.addEventListener("message", (e) => handleWsMessage(e.data));
+          ws.addEventListener("close", onDisconnected);
+        });
+      }
+
+      function onConnected() {
+        setLobbyBusy(false);
+        ui.connectCard.classList.remove("hidden");
+        ui.gameIdDisplay.textContent = state.gameId;
+        ui.connectLabel.textContent = state.isCreator
+          ? "Waiting for players to join…"
+          : "Connected — waiting for host to start…";
+
+        if (state.isCreator) {
+          ui.startBtn.classList.remove("hidden");
+        }
+
+        toast(
+          state.isCreator
+            ? "✅ Game created! Share the ID with a friend."
+            : "✅ Joined successfully!",
+          "success",
+        );
+      }
+
+      function onDisconnected(e) {
+        if (!state.gameOver && state.gameStarted) {
+          toast(`Disconnected (${e.code})`, "error");
+        }
+        setTimeout(resetToLobby, 2000);
+      }
+
+      function resetToLobby() {
+        Object.assign(state, {
+          ws: null,
+          gameId: null,
+          isCreator: false,
+          myColor: null,
+          toMove: null,
+          board: null,
+          rows: 0,
+          cols: 0,
+          moveCount: 0,
+          playerCount: 0,
+          gameStarted: false,
+          gameOver: false,
+          pendingRequests: {},
+        });
+
+        ui.game.style.display = "none";
+        ui.lobby.style.display = "flex";
+        ui.connectCard.classList.add("hidden");
+        ui.startBtn.classList.add("hidden");
+        ui.gameIdInput.value = "";
+        ui.gameOverOverlay.classList.remove("show");
+        setLobbyBusy(false);
+      }
+
+      // ════════════════════════════════════════════════
+      //  Server event handlers
+      // ════════════════════════════════════════════════
+      function onGameStarted(payload) {
+        state.gameStarted = true;
+        state.board = payload.board;
+        state.rows = payload.board.length;
+        state.cols = payload.board[0]?.length ?? 7;
+        state.toMove = payload.toMove;
+
+        // Use yourColor provided directly in the GAME_STARTED payload
+        if (payload.yourColor) {
+          state.myColor = payload.yourColor;
+          ui.mySwatch.style.background = COLOR_HEX[payload.yourColor] ?? "#888";
+          ui.mySwatch.style.boxShadow = `0 0 16px ${
+            COLOR_HEX[payload.yourColor] ?? "#888"
+          }88`;
+          ui.myColorLabel.textContent = `You are ${payload.yourColor}`;
+          ui.gameIdLabel.textContent = `Game: ${state.gameId?.slice(0, 8)}…`;
+        }
+
+        // Switch screens
+        ui.lobby.style.display = "none";
+        ui.game.style.display = "block";
+
+        buildBoard();
+        renderBoard();
+        updateTurnIndicator();
+        updatePlayersPanel();
+
+        toast("🎮 Game started!", "success");
+      }
+
+      function onStateUpdate(payload) {
+        state.board = payload.board;
+        state.toMove = payload.toMove;
+        state.moveCount = payload.move;
+        renderBoard();
+        updateTurnIndicator();
+        ui.moveCounter.textContent = `Move ${payload.move}`;
+      }
+
+      function onGameOver(payload) {
+        state.gameOver = true;
+        disableBoardInput();
+
+        const { reason, information: winner } = payload;
+
+        if (reason === "player_won") {
+          const isMe = winner === state.myColor;
+          ui.goIcon.textContent = isMe ? "🏆" : "😞";
+          ui.goTitle.textContent = isMe ? "You Won!" : "You Lost";
+          ui.goSub.textContent = `${
+            winner.charAt(0).toUpperCase() + winner.slice(1)
+          } wins the game!`;
+          ui.goWinnerSwatch.style.background = COLOR_HEX[winner] ?? "#888";
+          ui.goWinnerSwatch.classList.remove("hidden");
+          toast(
+            isMe ? "🏆 You won!" : `${winner} wins!`,
+            isMe ? "success" : "info",
+            6000,
+          );
+        } else if (reason === "stalemate") {
+          ui.goIcon.textContent = "🤝";
+          ui.goTitle.textContent = "Draw!";
+          ui.goSub.textContent = "The board is full — no winner this time.";
+          ui.goWinnerSwatch.classList.add("hidden");
+          toast("It's a draw!", "info");
+        } else {
+          ui.goIcon.textContent = "🚪";
+          ui.goTitle.textContent = "Game Ended";
+          ui.goSub.textContent = "A player disconnected.";
+          ui.goWinnerSwatch.classList.add("hidden");
+          toast("Game ended — a player left.", "info");
+        }
+
+        ui.gameOverOverlay.classList.add("show");
+      }
+
+      function onPlayerJoined(payload) {
+        state.playerCount = payload.playerCount;
+        ui.connectLabel.textContent = `${payload.playerCount} player${
+          payload.playerCount !== 1 ? "s" : ""
+        } connected`;
+        updatePlayersPanel();
+        toast(`A player joined (${payload.playerCount} total)`, "info");
+      }
+
+      function onPlayerLeft(payload) {
+        state.playerCount = payload.playerCount;
+        updatePlayersPanel();
+        toast(`A player left (${payload.playerCount} remaining)`, "info");
+      }
+
+      function onContextUpdate(payload) {
+        state.myColor = payload.yourColor;
+        state.toMove = payload.toMove;
+        state.playerCount = payload.playerCount;
+        state.moveCount = payload.moveCount;
+
+        ui.mySwatch.style.background = COLOR_HEX[payload.yourColor] ?? "#888";
+        ui.mySwatch.style.boxShadow = `0 0 16px ${
+          COLOR_HEX[payload.yourColor] ?? "#888"
+        }88`;
+        ui.myColorLabel.textContent = `You are ${payload.yourColor}`;
+        ui.gameIdLabel.textContent = `Game: ${state.gameId?.slice(0, 8)}…`;
+
+        updateTurnIndicator();
+        updatePlayersPanel();
+      }
+
+      function onHistory(payload) {
+        const moves = payload.data;
+        let body =
+          `<div style="font-size:.85rem;color:var(--muted);margin-bottom:12px;">${moves.length} move${
+            moves.length !== 1 ? "s" : ""
+          } played</div>`;
+
+        if (moves.length === 0) {
+          body +=
+            `<div style="color:var(--muted);font-size:.9rem;">No moves yet.</div>`;
+        } else {
+          body += moves.map((m) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);">
+        <div style="width:14px;height:14px;border-radius:50%;background:${
+            COLOR_HEX[m.player] ?? "#888"
+          };flex-shrink:0;"></div>
+        <span style="font-size:.9rem;flex:1;">${m.player} → col ${
+            m.col + 1
+          }</span>
+        <span style="font-size:.75rem;color:var(--muted);">#${m.move + 1}</span>
+        ${
+            m.wins
+              ? `<span style="font-size:.75rem;color:#22c55e;font-weight:800;">WIN</span>`
+              : ""
+          }
+      </div>`).join("");
+        }
+        showModal("Move History", body);
+      }
+
+      function onServerError(payload) {
+        toast(`[${payload.code}] ${payload.explanation}`, "error", 7000);
+      }
+
+      // ════════════════════════════════════════════════
+      //  Board rendering
+      // ════════════════════════════════════════════════
+      function buildBoard() {
+        ui.colButtons.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
+        ui.boardGrid.style.gridTemplateColumns = `repeat(${state.cols}, 1fr)`;
+
+        // Column drop buttons — one per column
+        ui.colButtons.innerHTML = "";
+        for (let c = 0; c < state.cols; c++) {
+          const btn = document.createElement("button");
+          btn.className = "col-btn";
+          btn.dataset.col = c;
+          btn.title = `Drop in column ${c + 1}`;
+          btn.textContent = "▼";
+          btn.addEventListener("click", () => dropCoin(c));
+          ui.colButtons.appendChild(btn);
+        }
+
+        // Grid cells.
+        // The board is column-major: board[col][row], row 0 = topmost cell.
+        // We fill the CSS grid row by row, bottom-to-top, so that the bottom
+        // of the visual board corresponds to the highest row index (where
+        // gravity settles coins).
+        // Cell ID: cell-{visualRow}-{col}  where visualRow 0 = top of screen.
+        ui.boardGrid.innerHTML = "";
+        for (let vr = 0; vr < state.rows; vr++) {
+          // vr 0 → data row 0 (top); vr rows-1 → data row rows-1 (bottom)
+          for (let c = 0; c < state.cols; c++) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.id = `cell-${vr}-${c}`;
+            cell.dataset.color = "";
+            ui.boardGrid.appendChild(cell);
+          }
+        }
+      }
+
+      function renderBoard() {
+        if (!state.board) return;
+        const boardRect = ui.boardGrid.getBoundingClientRect();
+
+        // board[col][row], row 0 = top of board = visual row 0
+        for (let c = 0; c < state.cols; c++) {
+          for (let vr = 0; vr < state.rows; vr++) {
+            const sq = state.board[c][vr]; // column-major access
+            const cell = document.getElementById(`cell-${vr}-${c}`);
+            if (!cell) continue;
+
+            const prevColor = cell.dataset.color ?? "";
+            const nextColor = sq ?? "";
+            if (prevColor === nextColor) continue;
+
+            cell.dataset.color = nextColor;
+
+            if (sq) {
+              cell.className = `cell color-${sq}`;
+              // Measure actual pixel distance from board top to this cell so the
+              // coin appears to fall from the top edge of the board downward.
+              const cellRect = cell.getBoundingClientRect();
+              const fallDist = Math.max(
+                cellRect.top - boardRect.top + cellRect.height,
+                cellRect.height,
+              );
+              cell.style.setProperty("--fall-dist", `${fallDist}px`);
+              void cell.offsetHeight; // force reflow to restart animation
+              cell.classList.add("dropping");
+              cell.addEventListener(
+                "animationend",
+                () => cell.classList.remove("dropping"),
+                { once: true },
+              );
+            } else {
+              cell.className = "cell";
+              cell.style.removeProperty("--fall-dist");
+            }
+          }
+        }
+      }
+
+      function updateTurnIndicator() {
+        if (!state.gameStarted) {
+          ui.turnIndicator.innerHTML =
+            `<span style="color:var(--muted);">Waiting for game to start…</span>`;
+          ui.turnIndicator.style.color = "var(--text)";
+          return;
+        }
+        const isMyTurn = state.toMove === state.myColor;
+        const hex = COLOR_HEX[state.toMove] ?? "#888";
+        const pip =
+          `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${hex};margin-right:6px;box-shadow:0 0 8px ${hex};"></span>`;
+
+        if (isMyTurn) {
+          ui.turnIndicator.innerHTML =
+            `${pip}<strong>Your turn!</strong> <span style="opacity:.6;">(${state.toMove})</span>`;
+          ui.turnIndicator.style.color = hex;
+          enableBoardInput();
+        } else {
+          const whom = state.toMove ?? "?";
+          ui.turnIndicator.innerHTML =
+            `${pip}<span style="opacity:.7;">Waiting for </span><strong>${whom}</strong>`;
+          ui.turnIndicator.style.color = "var(--text)";
+          disableBoardInput();
+        }
+        updatePlayersPanel();
+      }
+
+      function enableBoardInput() {
+        document.querySelectorAll(".col-btn").forEach((b) => {
+          b.disabled = false;
+        });
+      }
+      function disableBoardInput() {
+        document.querySelectorAll(".col-btn").forEach((b) => {
+          b.disabled = true;
+        });
+      }
+
+      function updatePlayersPanel() {
+        const items = [];
+        for (let i = 0; i < state.playerCount; i++) {
+          const c = COLOR_ORDER[i] ?? "white";
+          const isMe = c === state.myColor;
+          const isToMove = c === state.toMove && state.gameStarted;
+          items.push(`
+      <div class="player-row">
+        <div class="color-swatch" style="width:18px;height:18px;background:${
+            COLOR_HEX[c] ?? "#888"
+          };border-color:${COLOR_HEX[c] ?? "#888"}66;"></div>
+        <span class="name">${c.charAt(0).toUpperCase() + c.slice(1)}</span>
+        ${isMe ? '<span class="tag">You</span>' : ""}
+        ${isToMove ? '<span class="tag tag-move">▶ to move</span>' : ""}
+      </div>`);
+        }
+        ui.playerList.innerHTML = items.join("") ||
+          `<div style="color:var(--muted);font-size:.9rem;">No players connected</div>`;
+      }
+
+      // ════════════════════════════════════════════════
+      //  Game actions
+      // ════════════════════════════════════════════════
+      async function dropCoin(col) {
+        if (!state.gameStarted || state.gameOver) return;
+        if (state.toMove !== state.myColor) {
+          toast("It's not your turn!", "error");
+          return;
+        }
+        disableBoardInput();
+        try {
+          // The server calls the column parameter "row" in INSERT_COIN payload
+          await wsSend("INSERT_COIN", { row: col });
+        } catch {
+          toast("Move failed", "error");
+          if (state.toMove === state.myColor) enableBoardInput();
+        }
+      }
+
+      async function startGame() {
+        ui.startBtn.disabled = true;
+        try {
+          await wsSend("START_GAME");
+        } catch {
+          toast("Could not start game", "error");
+          ui.startBtn.disabled = false;
+        }
+      }
+
+      function leaveGame() {
+        if (state.ws) {
+          state.ws.onclose = null; // suppress onDisconnected
+          state.ws.close(1000, "user left");
+          state.ws = null;
+        }
+        resetToLobby();
+      }
+
+      // ════════════════════════════════════════════════
+      //  Generic modal
+      // ════════════════════════════════════════════════
+      function showModal(title, bodyHtml) {
+        const existing = document.getElementById("_modal");
+        if (existing) existing.remove();
+
+        const modal = document.createElement("div");
+        modal.id = "_modal";
+        modal.style.cssText = [
+          "position:fixed;inset:0;z-index:150;",
+          "background:rgba(0,0,0,.72);backdrop-filter:blur(8px);",
+          "display:flex;align-items:center;justify-content:center;",
+        ].join("");
+        modal.innerHTML = `
+    <div style="
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:var(--radius);padding:28px 32px;
+      max-width:420px;width:90%;max-height:70vh;overflow-y:auto;
+      box-shadow:0 24px 80px rgba(0,0,0,.7);
+      animation:pop-in .35s cubic-bezier(.34,1.56,.64,1);
+    ">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:1.1rem;font-weight:700;">${title}</div>
+        <button id="_modal-close" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:1.4rem;line-height:1;">✕</button>
+      </div>
+      ${bodyHtml}
+    </div>`;
+        document.body.appendChild(modal);
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.remove();
+        });
+        document.getElementById("_modal-close").addEventListener(
+          "click",
+          () => modal.remove(),
+        );
+      }
+
+      // ════════════════════════════════════════════════
+      //  Lobby UI helpers
+      // ════════════════════════════════════════════════
+      function setLobbyBusy(busy) {
+        ui.createBtn.disabled = busy;
+        ui.joinBtn.disabled = busy;
+      }
+
+      // ════════════════════════════════════════════════
+      //  Event bindings
+      // ════════════════════════════════════════════════
+      ui.createBtn.addEventListener("click", createGame);
+
+      ui.joinBtn.addEventListener(
+        "click",
+        () => joinGame(ui.gameIdInput.value),
+      );
+      ui.gameIdInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") joinGame(e.target.value);
+      });
+
+      ui.copyIdBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(state.gameId ?? "")
+          .then(() => toast("Game ID copied!", "success"))
+          .catch(() => toast("ID: " + state.gameId, "info", 8000));
+      });
+
+      ui.startBtn.addEventListener("click", startGame);
+      ui.leaveBtn = $("leave-btn");
+      ui.leaveBtn.addEventListener("click", leaveGame);
+
+      ui.historyBtn.addEventListener("click", () => {
+        if (!state.gameStarted) {
+          toast("Game hasn't started yet", "info");
+          return;
+        }
+        wsSend("GET_HISTORY").then((res) => {
+          if (res.type === "HISTORY") onHistory(res.payload);
+        })
+          .catch(() => toast("Could not fetch history", "error"));
+      });
+
+      ui.goCloseBtn.addEventListener("click", () => {
+        ui.gameOverOverlay.classList.remove("show");
+        leaveGame();
+      });
+    </script>
+  </body>
+</html>
