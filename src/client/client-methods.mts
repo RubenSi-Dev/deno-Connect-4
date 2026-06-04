@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { ServerResponse } from "../server/server-models.mts";
+import { ClientRequest } from "../server/client-models.mts";
 
 export function connectWebSocket(
   url: string,
@@ -15,7 +16,7 @@ export function connectWebSocket(
   });
 }
 
-export function request(
+export function requestOld(
   ws: WebSocket,
   type: string,
   extra?: Record<string, string | number>,
@@ -37,5 +38,30 @@ export function request(
 
     ws.addEventListener("message", handler);
     ws.send(JSON.stringify({ type, requestId, ...extra }));
+  });
+}
+
+export function request(
+  ws: WebSocket,
+  req: ClientRequest,
+): Promise<ServerResponse> {
+  return new Promise<ServerResponse>((resolve) => {
+    const requestId = randomUUID();
+
+    const handler = (e: MessageEvent) => {
+      try {
+        const msg = JSON.parse(e.data) as ServerResponse;
+        if (msg.requestId === requestId) {
+          ws.removeEventListener("message", handler);
+          resolve(msg);
+        }
+      } catch {
+        // Ignore non-JSON or unrelated messages
+      }
+    };
+
+    ws.addEventListener("message", handler);
+    req.requestId = requestId;
+    ws.send(JSON.stringify(req));
   });
 }

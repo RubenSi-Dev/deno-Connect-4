@@ -1,7 +1,8 @@
 import { Board } from "../state/board.mts";
 import { Game } from "../state/game.mts";
 import { color, colors } from "../state/types.mts";
-import { ClientRequest, GameSettings, ServerResponse } from "./server-models.mts";
+import { GameSettings, ServerResponse } from "./server-models.mts";
+import { ClientRequest } from "./client-models.mts";
 import { GameError } from "../utils/game-error.mts";
 
 /**
@@ -223,7 +224,7 @@ export class GameInstance {
     switch (req.type) {
       case "INSERT_COIN": {
         const playerColor = this.getPlayerColor(player);
-        this.game.insertCoin(playerColor, Number(req["row"]));
+        this.game.insertCoin(playerColor, req.payload.row);
         const response: ServerResponse = {
           type: "STATE_UPDATE",
           payload: {

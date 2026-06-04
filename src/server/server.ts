@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { GameInstance } from "./game-instance.mts";
-import { ClientRequest, ServerResponse } from "./server-models.mts";
+import { ServerResponse } from "./server-models.mts";
+import { ClientRequest } from "./client-models.mts";
 import { GameError } from "../utils/game-error.mts";
 
 const port = 8080;

@@ -6,7 +6,12 @@
  */
 export type ClientRequestOld = {
   /** The action the client wishes to perform. */
-  type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
+  type:
+    | "INSERT_COIN"
+    | "GET_HISTORY"
+    | "GET_COLOR"
+    | "GET_CONTEXT"
+    | "START_GAME";
   /** Optional client-generated ID echoed back in the response for async request matching. */
   requestId?: string; // echoed back in the response for async matching
   [keys: string]: string | number | undefined;
@@ -15,18 +20,23 @@ export type ClientRequestOld = {
 export type ClientRequest = ClientRequestBasic | ClientRequestInsertCoin;
 
 interface ClientRequestBase {
-	type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
-	requestId?: string;
-	payload?: unknown;
+  type:
+    | "INSERT_COIN"
+    | "GET_HISTORY"
+    | "GET_COLOR"
+    | "GET_CONTEXT"
+    | "START_GAME";
+  requestId?: string;
+  payload?: unknown;
 }
 
 interface ClientRequestBasic extends ClientRequestBase {
-	type: "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
+  type: "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
 }
 
 interface ClientRequestInsertCoin extends ClientRequestBase {
-	type: "INSERT_COIN";
-	payload: {
-		row: number;
-	}
+  type: "INSERT_COIN";
+  payload: {
+    row: number;
+  };
 }

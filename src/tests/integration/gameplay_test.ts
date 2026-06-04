@@ -41,9 +41,9 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     );
   }
 
-  await request(players[0], "startGame");
+  await request(players[0], { type: "START_GAME" });
 
-  await request(players[0], "insertCoin", { "row": 3 });
+  await request(players[0], { type: "INSERT_COIN", payload: { row: 3 } });
 
   await waitOrTimeout(
     () =>
@@ -77,7 +77,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     assert(foundUpd);
   });
 
-  await request(players[1], "insertCoin", { "row": 4 });
+  await request(players[1], { type: "INSERT_COIN", payload: { row: 4 } });
   await waitOrTimeout(() =>
     received.every((r) =>
       Array.from(r).some((p) =>
@@ -103,7 +103,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
       assert(found);
     });
 
-  await request(players[2], "insertCoin", { "row": 4 });
+  await request(players[2], { type: "INSERT_COIN", payload: { row: 4 } });
 
   await waitOrTimeout(() =>
     received.every((r) =>
@@ -124,7 +124,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     assert(found);
   });
 
-  await request(players[3], "insertCoin", { "row": 2 });
+  await request(players[3], { type: "INSERT_COIN", payload: { "row": 2 } });
   await waitOrTimeout(() =>
     received.every((r) =>
       Array.from(r).some((p) =>
@@ -144,7 +144,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     assert(found);
   });
 
-  await request(players[0], "insertCoin", { "row": 2 });
+  await request(players[0], { type: "INSERT_COIN", payload: { row: 2 } });
   await waitOrTimeout(() =>
     received.every((r) =>
       Array.from(r).some((p) =>

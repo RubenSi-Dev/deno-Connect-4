@@ -9,16 +9,26 @@ import { ErrorCode } from "../utils/game-error.mts";
  */
 export type ClientRequest = {
   /** The action the client wishes to perform. */
-  type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
+  type:
+    | "INSERT_COIN"
+    | "GET_HISTORY"
+    | "GET_COLOR"
+    | "GET_CONTEXT"
+    | "START_GAME";
   /** Optional client-generated ID echoed back in the response for async request matching. */
   requestId?: string; // echoed back in the response for async matching
   [keys: string]: string | number | undefined;
 };
 
 interface ClientRequestBase {
-	type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
-	requestId?: string;
-	payload?: unknown;
+  type:
+    | "INSERT_COIN"
+    | "GET_HISTORY"
+    | "GET_COLOR"
+    | "GET_CONTEXT"
+    | "START_GAME";
+  requestId?: string;
+  payload?: unknown;
 }
 
 /**

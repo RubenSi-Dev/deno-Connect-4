@@ -79,7 +79,7 @@ Deno.test("creating a game and then joining and eventually starting the game", a
     )
   ).then((r) => assert(r));
 
-  const res = await request(ws1, "startGame");
+  const res = await request(ws1, { type: "START_GAME" });
   assertEquals(res.type, "GAME_STARTED");
   //await delay(700);
   await waitOrTimeout(
