@@ -201,18 +201,35 @@ export class GameInstance {
             "INVALID_REQUEST",
             "game already has started or you are not starter",
           );}
-        const response: ServerResponse = {
-          type: "GAME_STARTED",
-          payload: {
-            board: this.game!.getBoard(),
-            toMove: this.game!.getPlayerToMove(),
-          },
-        };
-        // Ack only the requester with their requestId
-        this.sendResponse({ requestId: req.requestId, ...response }, player);
-
-        // Broadcast game-started event to everyone else (no requestId)
-        this.broadcastResponse(response, player);
+        for (let i = 0; i < this.players.length; i++) {
+          const currPlayer = this.players.at(i);
+          const yourColor = colors.at(i);
+          const response: ServerResponse = {
+            type: "GAME_STARTED",
+            payload: {
+              yourColor: yourColor!,
+              board: this.game!.getBoard(),
+              toMove: this.game!.getPlayerToMove(),
+            },
+          };
+          // Ack only the requester with their requestId
+          if (i === 0) {
+            if (currPlayer !== player) {
+              throw new GameError("INTERNAL_ERROR", "invalid internal state");
+            }
+            this.sendResponse(
+              { requestId: req.requestId, ...response },
+              currPlayer,
+            );
+          } else if (currPlayer === undefined || currPlayer === null) {
+            throw new GameError(
+              "GAME_CANT_START",
+              "a Player has already disconnected",
+            );
+          } else {
+            this.sendResponse(response, currPlayer);
+          }
+        }
         return;
       }
     }

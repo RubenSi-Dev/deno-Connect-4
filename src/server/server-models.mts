@@ -109,6 +109,8 @@ interface ServerResponseGameOver extends ServerResponseBase {
 interface ServerResponseGameStarted extends ServerResponseBase {
   type: "GAME_STARTED";
   payload: {
+    /** The color assigned to the requesting player. */
+    yourColor: color;
     /** The color of the player taking the first turn. */
     toMove: color;
     /** The initial board state (all nulls for a fresh game). */
