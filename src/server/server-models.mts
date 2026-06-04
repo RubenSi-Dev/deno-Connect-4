@@ -9,32 +9,17 @@ import { ErrorCode } from "../utils/game-error.mts";
  */
 export type ClientRequest = {
   /** The action the client wishes to perform. */
-  type: "insertCoin" | "getHistory" | "getColor" | "getContext" | "startGame";
+  type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
   /** Optional client-generated ID echoed back in the response for async request matching. */
   requestId?: string; // echoed back in the response for async matching
   [keys: string]: string | number | undefined;
 };
 
-/**
- * Legacy server response shape kept for backward compatibility with
- * `testclient.ts`. Prefer {@link ServerResponse} for new code.
- *
- * @deprecated Use {@link ServerResponse} instead.
- */
-export type ServerResponseOld = {
-  /** Echoed request ID for async matching. */
-  requestId?: string;
-  /** Color of the player whose turn it is. */
-  toMove?: color;
-  /** The winner color, or `"stalemate"`. */
-  winner?: color | "stalemate";
-  /** The color assigned to the requesting player. */
-  color?: color;
-  /** Generic data payload (board state or move history). */
-  data?: square[][] | moveData[];
-  /** Human-readable error description. */
-  error?: string;
-};
+interface ClientRequestBase {
+	type: "INSERT_COIN" | "GET_HISTORY" | "GET_COLOR" | "GET_CONTEXT" | "START_GAME";
+	requestId?: string;
+	payload?: unknown;
+}
 
 /**
  * Settings used to configure a new game board.

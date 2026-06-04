@@ -1,6 +1,6 @@
 import { assert, assertEquals, assertExists } from "@std/assert";
 import { connectWebSocket, request } from "../../client/client-methods.mts";
-import { ServerResponse } from "../../server/models.mts";
+import { ServerResponse } from "../../server/server-models.mts";
 import { color, square } from "../../state/types.mts";
 import { waitOrTimeout } from "../../utils/helpers.mts";
 

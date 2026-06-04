@@ -1,6 +1,5 @@
 import { BoardBase } from "./board.mts";
 import { color, colors, moveData, square } from "./types.mts";
-import { getBoardString } from "../utils/render.mts";
 import { GameError } from "../utils/game-error.mts";
 
 /**
@@ -49,7 +48,7 @@ export interface GameInterface {
    *
    * @returns A multi-line board string.
    */
-  getBoardString(): string;
+  //getBoardString(): string;
 
   /**
    * Returns the current board state as a column-major 2-D array.
@@ -203,12 +202,12 @@ export class Game implements GameInterface {
    *
    * @returns A formatted board string ready to print.
    */
-  public getBoardString(): string {
-    return getBoardString(
-      this.getBoard(),
-      `Turn: ${this.moveCount}          Move: ${this.getPlayerToMove()}`,
-    );
-  }
+  //public getBoardString(): string {
+  //  return getBoardString(
+  //    this.getBoard(),
+  //    `Turn: ${this.moveCount}          Move: ${this.getPlayerToMove()}`,
+  //  );
+  //}
 
   /**
    * Places a coin for the given player in the specified column, records the

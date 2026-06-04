@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
 import { connectWebSocket, request } from "../../client/client-methods.mts";
-import { ServerResponse } from "../../server/models.mts";
+import { ServerResponse } from "../../server/server-models.mts";
 import { delay, waitOrTimeout } from "../../utils/helpers.mts";
 
 const serverProcess = new Deno.Command(Deno.execPath(), {

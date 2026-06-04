@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { ServerResponse } from "../server/models.mts";
+import { ServerResponse } from "../server/server-models.mts";
 
 export function connectWebSocket(
   url: string,

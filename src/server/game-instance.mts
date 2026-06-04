@@ -1,7 +1,7 @@
 import { Board } from "../state/board.mts";
 import { Game } from "../state/game.mts";
 import { color, colors } from "../state/types.mts";
-import { ClientRequest, GameSettings, ServerResponse } from "./models.mts";
+import { ClientRequest, GameSettings, ServerResponse } from "./server-models.mts";
 import { GameError } from "../utils/game-error.mts";
 
 /**
@@ -193,7 +193,7 @@ export class GameInstance {
       throw new GameError("INVALID_REQUEST", "please generate a request id");
     }
     switch (req.type) {
-      case "startGame": {
+      case "START_GAME": {
         if (this.playerIsStarter(player) && !this.gameHasStarted()) {
           this.startGame();
         } else {throw new GameError(
@@ -221,7 +221,7 @@ export class GameInstance {
     }
 
     switch (req.type) {
-      case "insertCoin": {
+      case "INSERT_COIN": {
         const playerColor = this.getPlayerColor(player);
         this.game.insertCoin(playerColor, Number(req["row"]));
         const response: ServerResponse = {
@@ -237,7 +237,7 @@ export class GameInstance {
         break;
       }
 
-      case "getHistory": {
+      case "GET_HISTORY": {
         const response: ServerResponse = {
           type: "HISTORY",
           requestId: req.requestId,
@@ -249,7 +249,7 @@ export class GameInstance {
         break;
       }
 
-      case "getContext": {
+      case "GET_COLOR": {
         const response: ServerResponse = {
           type: "CONTEXT_UPDATE",
           requestId: req.requestId,
