@@ -3,7 +3,6 @@ import { Game } from "../state/game.mts";
 import { color, colors } from "../state/types.mts";
 import { ClientRequest, GameSettings, ServerResponse } from "./models.mts";
 import { GameError } from "../utils/game-error.mts";
-import { delay } from "../utils/helpers.mts";
 
 /**
  * Manages a single Connect Four game session including the set of connected
@@ -139,12 +138,11 @@ export class GameInstance {
    * @param exclude - An optional socket to skip (e.g. the requester who will
    *   receive an individual acknowledgement instead).
    */
-  private async broadcastResponse(
+  private broadcastResponse(
     resp: ServerResponse,
     exclude?: WebSocket,
-  ): Promise<void> {
+  ): void {
     const msg = JSON.stringify(resp);
-    await delay(500);
     this.players.forEach((p) => {
       if (p && p !== exclude && p.readyState === WebSocket.OPEN) p.send(msg);
     });
