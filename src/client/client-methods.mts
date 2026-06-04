@@ -16,31 +16,6 @@ export function connectWebSocket(
   });
 }
 
-export function requestOld(
-  ws: WebSocket,
-  type: string,
-  extra?: Record<string, string | number>,
-): Promise<ServerResponse> {
-  return new Promise<ServerResponse>((resolve) => {
-    const requestId = randomUUID();
-
-    const handler = (e: MessageEvent) => {
-      try {
-        const msg = JSON.parse(e.data) as ServerResponse;
-        if (msg.requestId === requestId) {
-          ws.removeEventListener("message", handler);
-          resolve(msg);
-        }
-      } catch {
-        // Ignore non-JSON or unrelated messages
-      }
-    };
-
-    ws.addEventListener("message", handler);
-    ws.send(JSON.stringify({ type, requestId, ...extra }));
-  });
-}
-
 export function request(
   ws: WebSocket,
   req: ClientRequest,

@@ -2,36 +2,6 @@ import { color, moveData, square } from "../state/types.mts";
 import { ErrorCode } from "../utils/game-error.mts";
 
 /**
- * A message sent from a WebSocket client to the server.
- * The `type` field determines which server action is triggered.
- * Additional fields (e.g. `row`) are action-specific and passed via the
- * index signature.
- */
-export type ClientRequest = {
-  /** The action the client wishes to perform. */
-  type:
-    | "INSERT_COIN"
-    | "GET_HISTORY"
-    | "GET_COLOR"
-    | "GET_CONTEXT"
-    | "START_GAME";
-  /** Optional client-generated ID echoed back in the response for async request matching. */
-  requestId?: string; // echoed back in the response for async matching
-  [keys: string]: string | number | undefined;
-};
-
-interface ClientRequestBase {
-  type:
-    | "INSERT_COIN"
-    | "GET_HISTORY"
-    | "GET_COLOR"
-    | "GET_CONTEXT"
-    | "START_GAME";
-  requestId?: string;
-  payload?: unknown;
-}
-
-/**
  * Settings used to configure a new game board.
  */
 export type GameSettings = {
