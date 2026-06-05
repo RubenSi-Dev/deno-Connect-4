@@ -224,10 +224,12 @@ export class Game implements GameInterface {
    *   (column out of bounds or full).
    */
   public insertCoin(player: color, col: number): boolean {
+    if (this.isOver()) {
+      throw new GameError("GAME_OVER", "The game is over");
+    }
     if (this.getPlayerToMove() !== player) {
       throw new GameError("INVALID_REQUEST", "Its not your turn");
     }
-    if (this.isOver()) throw new GameError("GAME_OVER", "Game is over");
     this.board.insertCoin(player, col);
 
     const win = this.board.isOver();

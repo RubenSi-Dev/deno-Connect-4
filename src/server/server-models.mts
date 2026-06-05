@@ -131,6 +131,12 @@ interface ServerResponseStateUpdate extends ServerResponseBase {
     board: square[][];
     /** The number of the move */
     move: number;
+
+    /** When the game is won after a move is made*/
+    gameOver?: {
+      reason: "PLAYER_WON" | "STALEMATE" | "DISCONNECTED";
+      information: color | undefined;
+    };
   };
 }
 

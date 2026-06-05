@@ -227,12 +227,23 @@ export class GameInstance {
       case "INSERT_COIN": {
         const playerColor = this.getPlayerColor(player);
         this.game.insertCoin(playerColor, req.payload.row);
+        const gameOverInfo = this.game.isOver();
         const response: ServerResponse = {
           type: "STATE_UPDATE",
           payload: {
             board: this.game.getBoard(),
             toMove: this.game.getPlayerToMove(),
             move: (this.game.getHistory().at(-1)!.move ?? -1) + 1,
+            gameOver: gameOverInfo
+              ? {
+                reason: gameOverInfo === "stalemate"
+                  ? "STALEMATE"
+                  : "PLAYER_WON",
+                information: gameOverInfo === "stalemate"
+                  ? undefined
+                  : gameOverInfo,
+              }
+              : undefined,
           },
         };
         this.sendResponse({ requestId: req.requestId, ...response }, player);

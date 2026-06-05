@@ -1077,15 +1077,30 @@
         renderBoard();
         updateTurnIndicator();
         ui.moveCounter.textContent = `Move ${payload.move}`;
+
+        // If this move ended the game, show the popup after the board renders.
+        if (payload.gameOver) {
+          // Small delay so the winning coin's drop animation finishes first.
+          setTimeout(() => {
+            showGameOverPopup(
+              payload.gameOver.reason,
+              payload.gameOver.information,
+            );
+          }, 450);
+        }
       }
 
-      function onGameOver(payload) {
+      /**
+       * Core game-over UI: sets state, disables input, and shows the overlay.
+       * @param {string} reason  - "PLAYER_WON" | "STALEMATE" | "DISCONNECTED"
+       * @param {string|undefined} winner - winning color, or undefined
+       */
+      function showGameOverPopup(reason, winner) {
+        if (state.gameOver) return; // guard against double-trigger
         state.gameOver = true;
         disableBoardInput();
 
-        const { reason, information: winner } = payload;
-
-        if (reason === "player_won") {
+        if (reason === "PLAYER_WON") {
           const isMe = winner === state.myColor;
           ui.goIcon.textContent = isMe ? "🏆" : "😞";
           ui.goTitle.textContent = isMe ? "You Won!" : "You Lost";
@@ -1099,7 +1114,7 @@
             isMe ? "success" : "info",
             6000,
           );
-        } else if (reason === "stalemate") {
+        } else if (reason === "STALEMATE") {
           ui.goIcon.textContent = "🤝";
           ui.goTitle.textContent = "Draw!";
           ui.goSub.textContent = "The board is full — no winner this time.";
@@ -1114,6 +1129,20 @@
         }
 
         ui.gameOverOverlay.classList.add("show");
+      }
+
+      // Legacy GAME_OVER event (kept for backward compatibility).
+      // Maps the old lowercase reasons to the uppercase ones used by showGameOverPopup.
+      function onGameOver(payload) {
+        const reasonMap = {
+          player_won: "PLAYER_WON",
+          stalemate: "STALEMATE",
+          disconnected: "DISCONNECTED",
+        };
+        showGameOverPopup(
+          reasonMap[payload.reason] ?? "DISCONNECTED",
+          payload.information,
+        );
       }
 
       function onPlayerJoined(payload) {

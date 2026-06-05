@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "@std/assert";
+import { assert, assertEquals, assertExists } from "@std/assert";
 import { connectWebSocket, request } from "../../client/client-methods.mts";
 import { ServerResponse } from "../../server/server-models.mts";
 import { delay, waitOrTimeout } from "../../utils/helpers.mts";
@@ -24,7 +24,7 @@ Deno.test.afterAll(() => {
   serverProcess.kill("SIGTERM");
 });
 
-Deno.test("The correct game state is broadcasted on every move", async () => {
+Deno.test("The correct game state is broadcasted on every move, and broadcasts when a player wins", async () => {
   const url = await createGame().then((g) =>
     `ws://localhost:8080/games/${g}/ws`
   );
@@ -144,7 +144,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     assert(found);
   });
 
-  await request(players[0], { type: "INSERT_COIN", payload: { row: 2 } });
+  await request(players[0], { type: "INSERT_COIN", payload: { row: 3 } });
   await waitOrTimeout(() =>
     received.every((r) =>
       Array.from(r).some((p) =>
@@ -157,10 +157,69 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
     let found = false;
     p.forEach((r) => {
       if (r.type === "STATE_UPDATE" && r.payload.move === 5) {
-        assertEquals(r.payload.board[2].at(-2), "white");
+        assertEquals(r.payload.board[3].at(-2), "white");
         found = true;
       }
     });
     assert(found);
   });
+
+  await request(players[1], { type: "INSERT_COIN", payload: { row: 2 } });
+  await request(players[2], { type: "INSERT_COIN", payload: { row: 4 } });
+  await request(players[3], { type: "INSERT_COIN", payload: { row: 5 } });
+  await request(players[0], { type: "INSERT_COIN", payload: { row: 3 } });
+  await request(players[1], { type: "INSERT_COIN", payload: { row: 0 } });
+  await request(players[2], { type: "INSERT_COIN", payload: { row: 0 } });
+  await request(players[3], { type: "INSERT_COIN", payload: { row: 1 } });
+  await request(players[0], { type: "INSERT_COIN", payload: { row: 3 } });
+
+  await waitOrTimeout(() =>
+    received.every((r) =>
+      Array.from(r).some((p) =>
+        p.type === "STATE_UPDATE" && p.payload.move === 13
+      )
+    )
+  ).then((r) => assert(r));
+
+  received.forEach((p) => {
+    let found1 = false;
+    let found2 = false;
+    p.forEach((r) => {
+      if (r.type === "STATE_UPDATE" && r.payload.move === 12) {
+        found1 = true;
+        assertEquals(r.payload.board[1].at(-1), "red");
+        assertEquals(r.payload.board[3].at(-4), null);
+        assertEquals(r.payload.gameOver, undefined);
+      }
+      if (r.type === "STATE_UPDATE" && r.payload.move === 13) {
+        found2 = true;
+        assertEquals(r.payload.board[3].at(-4), "white");
+        assertExists(r.payload.gameOver);
+        assertEquals(r.payload.gameOver.reason, "PLAYER_WON");
+        assertEquals(r.payload.gameOver.information, "white");
+      }
+    });
+    assert(found1);
+    assert(found2);
+  });
+
+  await request(players[1], { type: "INSERT_COIN", payload: { row: 4 } });
+
+  await waitOrTimeout(() =>
+    Array.from(received[1]).some((p) => p.type === "ERROR")
+  ).then((r) => assert(r));
+  const errResponse = Array.from(received[1]).find((r) => r.type === "ERROR");
+  assertExists(errResponse);
+  assertEquals(errResponse.payload, {
+    code: "GAME_OVER",
+    explanation: "The game is over",
+  });
+
+  await waitOrTimeout(
+    () =>
+      received.every((p, i) =>
+        i !== 1 && Array.from(p).some((r) => r.type === "ERROR")
+      ),
+    800,
+  ).then((r) => assert(!r));
 });
