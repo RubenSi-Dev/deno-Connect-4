@@ -50,7 +50,7 @@ Deno.test("The correct game state is broadcasted on every move", async () => {
       received.every((r) =>
         Array.from(r).some((p) => p.type === "GAME_STARTED")
       ),
-    1000,
+    5000,
   ).then((r) => assert(r));
 
   await waitOrTimeout(

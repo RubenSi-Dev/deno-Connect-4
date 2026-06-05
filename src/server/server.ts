@@ -112,9 +112,28 @@ function handleWs(sock: WebSocket, gameUUID: string) {
  *
  * All other routes return `404`.
  */
-Deno.serve({ port }, (req) => {
+// Resolve the path to index.html relative to this source file's directory.
+const clientHtmlPath =
+  new URL("../client/index.html", import.meta.url).pathname;
+
+Deno.serve({ port }, async (req) => {
   const url = new URL(req.url);
   const method = req.method;
+
+  // GET / or GET /index.html — serve the frontend
+  if (
+    method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")
+  ) {
+    try {
+      const html = await Deno.readFile(clientHtmlPath);
+      return new Response(html, {
+        status: 200,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    } catch {
+      return new Response("Frontend not found", { status: 404 });
+    }
+  }
 
   // POST /games — plain HTTP: create a new game, return its UUID
   if (method === "POST" && url.pathname === "/games") {

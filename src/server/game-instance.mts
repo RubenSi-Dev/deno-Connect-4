@@ -194,27 +194,29 @@ export class GameInstance {
       throw new GameError("INVALID_REQUEST", "please generate a request id");
     }
     switch (req.type) {
-      case "START_GAME": {
-        if (this.playerIsStarter(player) && !this.gameHasStarted()) {
-          this.startGame();
-        } else {throw new GameError(
-            "INVALID_REQUEST",
-            "game already has started or you are not starter",
-          );}
-        const response: ServerResponse = {
-          type: "GAME_STARTED",
-          payload: {
-            board: this.game!.getBoard(),
-            toMove: this.game!.getPlayerToMove(),
-          },
-        };
-        // Ack only the requester with their requestId
-        this.sendResponse({ requestId: req.requestId, ...response }, player);
-
-        // Broadcast game-started event to everyone else (no requestId)
-        this.broadcastResponse(response, player);
+      case "START_GAME":
+        {
+          if (this.playerIsStarter(player) && !this.gameHasStarted()) {
+            this.startGame();
+          } else {throw new GameError(
+              "INVALID_REQUEST",
+              "game already has started or you are not starter",
+            );}
+          // Ack only the requester with their requestId
+          this.players.forEach((pl) => {
+            if (!pl) return;
+            this.sendResponse({
+              type: "GAME_STARTED",
+              requestId: (player === pl) ? req.requestId : undefined,
+              payload: {
+                yourColor: this.getPlayerColor(pl),
+                board: this.game!.getBoard(),
+                toMove: this.game!.getPlayerToMove(),
+              },
+            }, pl);
+          });
+        }
         return;
-      }
     }
 
     if (!this.game) {
