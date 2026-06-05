@@ -90,12 +90,17 @@ Deno.test("creating a game and then joining and eventually starting the game", a
   const lastws2payload = wsMessages.get("ws2")!.at(-1)!.payload as {
     board: square[][];
     toMove: color;
+    yourColor: color;
   };
-  const lastws3payload = wsMessages.get("ws2")!.at(-1)!.payload as {
+  const lastws3payload = wsMessages.get("ws3")!.at(-1)!.payload as {
     board: square[][];
     toMove: color;
+    yourColor: color;
   };
 
   assertEquals(lastws2payload.toMove, "white");
   assertEquals(lastws3payload.toMove, "white");
+
+  assertEquals(lastws2payload.yourColor, "black");
+  assertEquals(lastws3payload.yourColor, "blue");
 });
