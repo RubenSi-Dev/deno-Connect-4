@@ -81,13 +81,11 @@ Deno.test("creating a game and then joining and eventually starting the game", a
 
   const res = await request(ws1, { type: "START_GAME" });
   assertEquals(res.type, "GAME_STARTED");
-  //await delay(700);
   await waitOrTimeout(
     () =>
       Array.from(wsMessages.values()).every((r) =>
         r.at(-1) !== undefined && r.at(-1)!.type === "GAME_STARTED"
       ),
-    800,
   ).then((r) => assert(r));
   const lastws2payload = wsMessages.get("ws2")!.at(-1)!.payload as {
     board: square[][];

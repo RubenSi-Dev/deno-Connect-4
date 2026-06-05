@@ -194,44 +194,29 @@ export class GameInstance {
       throw new GameError("INVALID_REQUEST", "please generate a request id");
     }
     switch (req.type) {
-      case "START_GAME": {
-        if (this.playerIsStarter(player) && !this.gameHasStarted()) {
-          this.startGame();
-        } else {throw new GameError(
-            "INVALID_REQUEST",
-            "game already has started or you are not starter",
-          );}
-        for (let i = 0; i < this.players.length; i++) {
-          const currPlayer = this.players.at(i);
-          const yourColor = colors.at(i);
-          const response: ServerResponse = {
-            type: "GAME_STARTED",
-            payload: {
-              yourColor: yourColor!,
-              board: this.game!.getBoard(),
-              toMove: this.game!.getPlayerToMove(),
-            },
-          };
+      case "START_GAME":
+        {
+          if (this.playerIsStarter(player) && !this.gameHasStarted()) {
+            this.startGame();
+          } else {throw new GameError(
+              "INVALID_REQUEST",
+              "game already has started or you are not starter",
+            );}
           // Ack only the requester with their requestId
-          if (i === 0) {
-            if (currPlayer !== player) {
-              throw new GameError("INTERNAL_ERROR", "invalid internal state");
-            }
-            this.sendResponse(
-              { requestId: req.requestId, ...response },
-              currPlayer,
-            );
-          } else if (currPlayer === undefined || currPlayer === null) {
-            throw new GameError(
-              "GAME_CANT_START",
-              "a Player has already disconnected",
-            );
-          } else {
-            this.sendResponse(response, currPlayer);
-          }
+          this.players.forEach((pl) => {
+            if (!pl) return;
+            this.sendResponse({
+              type: "GAME_STARTED",
+              requestId: (player === pl) ? req.requestId : undefined,
+              payload: {
+                yourColor: this.getPlayerColor(pl),
+                board: this.game!.getBoard(),
+                toMove: this.game!.getPlayerToMove(),
+              },
+            }, pl);
+          });
         }
         return;
-      }
     }
 
     if (!this.game) {
